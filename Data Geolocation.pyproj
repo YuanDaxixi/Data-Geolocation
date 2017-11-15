@@ -24,6 +24,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="classifier.py" />
+    <Compile Include="PDP\check_sockaddr.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PDP\client.py">
       <SubType>Code</SubType>
     </Compile>
