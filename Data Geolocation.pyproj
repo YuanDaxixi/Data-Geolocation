@@ -24,10 +24,22 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="classifier.py" />
+    <Compile Include="PDP\check_sockaddr.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="PDP\client.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PDP\landmark.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PDP\prover.py">
+    <Compile Include="PDP\cloud.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="PDP\server.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="PDP\user.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
