@@ -2,7 +2,7 @@
 # server interface(multithread)
 # created by YuanDa 2017-11
 
-import socket, threading
+import socket, threading, struct
 from check_sockaddr import is_valid_addr
 
 # the argument func is the function binding to the new thread
@@ -22,6 +22,7 @@ def set_server(ip, port, max_client, func, *arg):
         print 'Waiting Connection...'
     except socket.error, e:
         print 'Socket Error', e
+
     while(True):
         client_sock, client_ip = s.accept()
         print 'Connected by', client_ip
@@ -36,15 +37,26 @@ def set_server(ip, port, max_client, func, *arg):
     s.close()
     return True
 
-# just for simply testing set_server()
+# just for simply testing
 def test_func(*args):
     whisper, client = args
-    while(whisper != ''):
+    temp = client.recv(4)
+    blocksize = socket.ntohl(struct.unpack('i', temp)[0])
+    temp = client.recv(4)
+    blockcount = socket.ntohl(struct.unpack('i', temp)[0])
+
+    received = 0
+    while(received < blockcount):
         try:
-            whisper = client.recv(1024)
-            client.send('I got ' + whisper)
+            whisper = client.recv(blocksize)
+            print ('I got ' + whisper)
+            received += 1
         except socket.error, e:
             print 'Nothing received or nothing sent', e
+
+    say_goodbye = client.recv(1024)
+    if say_goodbye == 'Done':
+        client.send('All Received!')
     print 'Connection %s closed' % client.getsockname()[0]
     client.close()
 
