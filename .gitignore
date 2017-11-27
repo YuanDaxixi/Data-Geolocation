@@ -2,3 +2,5 @@
 *.pyc
 .vs/Data Geolocation/v15/.suo
 *.pyc
+*.ipch
+*.db
