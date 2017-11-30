@@ -1,26 +1,38 @@
 # -*- coding: utf-8 -*-
-# user module
+# cloud module
 # created by YuanDa 2017-11
 
-import socket, struct, timeit, random, time
+import socket, struct 
 
-def retrieve_block(index, blocksize):
+def retrieve_block(index, blocksize, fp):
     """return the file(pointed by fp) block according to 'index'"""
-    a = time.clock()
-    fp = open('test', 'rb')
     offset = index * blocksize
     fp.seek(offset)
     block = fp.read(blocksize)
-    b = time.clock()
-    print (b - a) * 1000, 'ms'
     return block
 
-def test_time(func):
-    time = timeit.timeit(func, 'from __main__ import retrieve_block')
-    print time
+def test_response_user(*args):
+    """ just for test, the cloud receive blocksize, blockcount
+    then begin to receive the file needing stored, once user sending
+    'Done', cloud reply 'All Received', and connection completed
+    """
+    whisper, client = args
+    temp = client.recv(4)
+    blocksize = socket.ntohl(struct.unpack('L', temp)[0])
+    temp = client.recv(4)
+    blockcount = socket.ntohl(struct.unpack('L', temp)[0])
 
-#test_time('retrieve_block(0, 4096)')
-a = time.clock()
-retrieve_block(0, 4096)
-b = time.clock()
-print (b - a) * 1000, 'ms'
+    received = 0
+    while(received < blockcount):
+        try:
+            whisper = client.recv(blocksize)
+            print ('I got ' + whisper)
+            received += 1
+        except socket.error, e:
+            print 'Nothing received or nothing sent', e
+
+    say_goodbye = client.recv(1024)
+    if say_goodbye == 'Done':
+        client.send('All Received!')
+    print 'Connection %s closed' % client.getsockname()[0]
+    client.close()

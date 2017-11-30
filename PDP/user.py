@@ -6,68 +6,13 @@ import Crypto
 from Crypto.Hash import HMAC
 from Crypto.Hash import SHA256
 from Crypto.Random import random
-import socket, struct
+import socket, struct, time
+from key import gen_key, get_tag_key, store_key, retrieve_key
 
 BLOCKSIZE = 4096
 TAG_LEN = SHA256.digest_size * 8
 KEY_LEN = 256
 BUFF_SIZE = 1024
-
-################# Key Generation #################
-
-
-def gen_key(key_len, mode = 0):
-    """ key generation, return key or False
-    mode -- 0 for symmetric key, 1 for public key
-    key_len -- key length
-    """
-    if mode == 0:
-        key = random.getrandbits(key_len)
-        return (key,)
-    elif mode == 1:
-        pass
-    else:
-        print 'Wrong mode, 0 or 1'
-        return False
-
-def get_tag_key(key, mode = 0):
-    """retrieve key from gen_key(), return key in bytes"""
-    if mode == 0:
-        tag_key = get_secret_key(key) # symmtric key implementation
-    elif mode == 1:
-        tag_key = get_private_key(key) # public key implementation
-    else:
-        print 'bad mode'
-        tag_key = False
-    return tag_key
-
-def get_secret_key(key):
-    if len(key) == 1 and type(key[0]) == long:
-        return key[0]
-    else:
-        print 'illegal symmtric key'
-        return False
-
-def get_public_key(key):
-    if len(key) == 2 and type(key[0]) == long:
-        return key[0]
-    else:
-        print 'illegal public key pair'
-        return False
-
-def get_private_key(key):
-    if len(key) == 2 and type(key[1]) == long:
-        return key[1]
-    else:
-        print 'illegal public key pair'
-        return False
-
-def store_key(key, file_name):
-    """ store the key in file named 'file_name' """
-    with open(file_name, 'wb') as fp:
-        for item in key:
-            fp.write(random.long_to_bytes(item))
-
 
 ################ PDP Setup Phase ################
 
@@ -99,15 +44,17 @@ def pdp_setup(*args):
 
 def sendto_cloud(file_name, blocksize, server_sock):
     """send 'blocksize' 'block_count' and file named 'file_name' to the cloud(server_sock)
+       4 bytes, 4 bytes for blocksize, block_count
+       blocksize bytes for block each time(block_count times)
     argument is same as above
     block_count -- global variable
     """
     global block_count
     with open(file_name, 'rb') as fp:
         # send blocksize first and the number of blocks second
-        server_sock.send(struct.pack('i', socket.htonl(blocksize)))
-        server_sock.send(struct.pack('i', socket.htonl(block_count)))
-        # send each block one by one
+        server_sock.send(struct.pack('L', socket.htonl(blocksize)))
+        server_sock.send(struct.pack('L', socket.htonl(block_count)))
+        #send each block one by one
         while(True):
             data = fp.read(blocksize)
             if not data: break
@@ -115,8 +62,9 @@ def sendto_cloud(file_name, blocksize, server_sock):
 
 def wait_ack(server_sock):
     """send 'Done' tell cloud no data sent any more
-    and the cloud should reply 'All Received'"""
+       and the cloud should reply 'All Received'"""
     try:
+        time.sleep(2)
         server_sock.send('Done')
         reply = server_sock.recv(BUFF_SIZE)
     except socket.errno, e:
@@ -129,7 +77,7 @@ def wait_ack(server_sock):
 
 def gen_metadata(file_name, output_name, blocksize = BLOCKSIZE, mode = 0):
     """divide file named 'file_name' into blocks, then calculate tags and
-    save tags in a new file named 'output_name'"""
+       save tags in a new file named 'output_name'"""
     key = gen_key(KEY_LEN)
     tag_key = get_tag_key(key)
     if not tag_key:
@@ -173,3 +121,86 @@ def gen_tag(block, key, hash_func = SHA256):
     Mac = HMAC.new(key, block, hash_func)
     tag = Mac.digest()
     return tag
+################ PDP Setup Phase END ################
+
+################ Request Service ################
+
+def request_serve(*args):
+    """ request LC geolocation user's data, and wait for the result
+        invoked by user<->LC client
+    key_file -- the file storing the key
+    tag_file -- the file storing blocksize, TAG_LEN and tags
+    server_sock -- socket
+    """
+    key_file, tag_file, server_sock = args
+    try:
+        key = get_tag_key(retrieve_key(key_file))
+    except IOError, e:
+        print 'Error while reading key from disk'
+    try:
+        send_key(key, server_sock)
+    except socket.error, e:
+        print 'Error while sending key'
+    try:
+        blocksize, tag_len, tag_list = read_tag(tag_file)
+    except IOError, e:
+        print 'Error while reading tags'
+    try:
+        send_tags(blocksize, tag_len, tag_list, server_sock)
+    except socket.error, e:
+        print 'Error while send tags'
+    try:
+        wait_good_news(server_sock)
+    except socket.error, e:
+        print 'Oh! Worst News.'
+
+def send_key(key, server_sock):
+    """ send the key which generate tags to LC
+        4 bytes for key-length, 32 bytes for key
+    key -- the key mentioned above
+    server_sock -- socket
+    """
+    key_inbytes = random.long_to_bytes(key)
+    key_len = len(key_inbytes)
+    server_sock.send(struct.pack('L', socket.htonl(key_len)))
+    server_sock.send(key_inbytes)
+
+def read_tags(tag_file):
+    """ read blocksize, TAG_LEN, and tags from disk, and return them
+    tag_file -- name of the file storing datas mentioned above
+    """
+    tag_list = []
+    with open(tag_file, 'rb') as fp:
+        blocksize = struct.unpack('i', fp.read(4))[0]
+        tag_len = struct.unpack('i', fp.read(4))[0]
+        while True:
+            tag = fp.read(blocksize)
+            if not tag:
+                break
+            tag_list.append(tag)
+    return (blocksize, tag_len, tag_list)
+
+def send_tags(blocksize, tag_len, tag_list, server_sock):
+    """ send blocksize, tag_len and tags to LC
+        4 bytes, 4 bytes, 4 bytes for blocksize, tag_len, tag_count
+        tag_len bytes for tag each time(tag_count times)
+    arguments is the same as functions' above
+    """
+    tag_count = len(tag_list)
+    server_sock.send(struct.pack('L', socket.htonl(blocksize)))
+    server_sock.send(struct.pack('L', socket.htonl(tag_len)))
+    server_sock.send(struct.pack('L', socket.htonl(tag_count)))
+    for tag in tag_list:
+        server_sock.send(tag)
+    time.sleep(1)
+
+def wait_good_news(server_sock):
+    """ wait LC return the result of geolocation
+    server_sock -- socket
+    """
+    time.sleep(1)
+    server_sock.send('Finished')
+    good_news = server_sock.recv(BUFF_SIZE)
+    print good_news
+
+################ Request Service END################

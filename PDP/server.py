@@ -5,12 +5,12 @@
 import socket, threading, struct
 from check_sockaddr import is_valid_addr
 
-# the argument func is the function binding to the new thread
-# the argument arg is passed to func in tuple type whose last
-# element is client's socket
-# the argument ip, port, max_client are ipv4 address, port and
-# max client numbers allowed to connect to this server
 def set_server(ip, port, max_client, func, *arg):
+    """ a server interface providing multithreading capability
+    func -- the function binding to the new thread
+    arg -- passed to func in tuple whose last element is client's socket
+    ip, port, max_client -- self ipv4 address, port and max client numbers 
+    """
     self_addr = (ip, port)
     if not is_valid_addr(self_addr):
         print 'Please try again with a legal self_addr'
@@ -40,28 +40,30 @@ def set_server(ip, port, max_client, func, *arg):
 # just for simply testing
 def test_func(*args):
     whisper, client = args
-    temp = client.recv(4)
-    blocksize = socket.ntohl(struct.unpack('i', temp)[0])
-    temp = client.recv(4)
-    blockcount = socket.ntohl(struct.unpack('i', temp)[0])
+
+    key_len = socket.ntohl(struct.unpack('L', client.recv(4))[0])
+    key = client.recv(key_len)
+    blocksize = socket.ntohl(struct.unpack('L', client.recv(4))[0])
+    tag_len = socket.ntohl(struct.unpack('L', client.recv(4))[0])
+    tag_count = socket.ntohl(struct.unpack('L', client.recv(4))[0])
 
     received = 0
-    while(received < blockcount):
+    while(received < tag_count):
         try:
-            whisper = client.recv(blocksize)
+            whisper = client.recv(tag_len)
             print ('I got ' + whisper)
             received += 1
         except socket.error, e:
             print 'Nothing received or nothing sent', e
 
     say_goodbye = client.recv(1024)
-    if say_goodbye == 'Done':
-        client.send('All Received!')
+    if say_goodbye == 'Finished':
+        client.send('Good News!')
     print 'Connection %s closed' % client.getsockname()[0]
     client.close()
 
-# customize the function if needed
-# this function should check if the client connected
-# is a legal one, if so, return True, else False
 def is_valid_client(ip):
+    """customize the function if needed,
+    it should check if the client connected is
+    a legal one, if so, return True, else False"""
     return True
