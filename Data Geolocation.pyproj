@@ -39,6 +39,9 @@
     <Compile Include="PDP\cloud.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="PDP\LC.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PDP\server.py">
       <SubType>Code</SubType>
     </Compile>

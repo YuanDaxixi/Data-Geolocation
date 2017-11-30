@@ -4,6 +4,7 @@
 
 import socket, threading, struct
 from check_sockaddr import is_valid_addr
+from Crypto.Random import random
 
 def set_server(ip, port, max_client, func, *arg):
     """ a server interface providing multithreading capability
@@ -40,18 +41,22 @@ def set_server(ip, port, max_client, func, *arg):
 # just for simply testing
 def test_func(*args):
     whisper, client = args
-
     key_len = socket.ntohl(struct.unpack('L', client.recv(4))[0])
-    key = client.recv(key_len)
+    key = random.bytes_to_long(client.recv(key_len))
     blocksize = socket.ntohl(struct.unpack('L', client.recv(4))[0])
     tag_len = socket.ntohl(struct.unpack('L', client.recv(4))[0])
     tag_count = socket.ntohl(struct.unpack('L', client.recv(4))[0])
+    print key_len
+    print key
+    print blocksize
+    print tag_len
+    print tag_count
 
     received = 0
     while(received < tag_count):
         try:
             whisper = client.recv(tag_len)
-            print ('I got ' + whisper)
+            #print ('I got ' + whisper)
             received += 1
         except socket.error, e:
             print 'Nothing received or nothing sent', e

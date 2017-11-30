@@ -142,7 +142,7 @@ def request_serve(*args):
     except socket.error, e:
         print 'Error while sending key'
     try:
-        blocksize, tag_len, tag_list = read_tag(tag_file)
+        blocksize, tag_len, tag_list = read_tags(tag_file)
     except IOError, e:
         print 'Error while reading tags'
     try:
@@ -172,9 +172,9 @@ def read_tags(tag_file):
     tag_list = []
     with open(tag_file, 'rb') as fp:
         blocksize = struct.unpack('i', fp.read(4))[0]
-        tag_len = struct.unpack('i', fp.read(4))[0]
+        tag_len = struct.unpack('i', fp.read(4))[0] / 8
         while True:
-            tag = fp.read(blocksize)
+            tag = fp.read(tag_len)
             if not tag:
                 break
             tag_list.append(tag)
