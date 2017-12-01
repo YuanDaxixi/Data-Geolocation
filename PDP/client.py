@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# a client interface
+# client interface(multithread)
 # created by YuanDa 2017-11
 
 import socket

@@ -6,7 +6,7 @@ import Crypto
 from Crypto.Hash import HMAC
 from Crypto.Hash import SHA256
 from Crypto.Random import random
-import socket, struct, time
+import socket, struct, time, os
 from key import gen_key, get_tag_key, store_key, retrieve_key
 
 BLOCKSIZE = 4096
@@ -43,17 +43,16 @@ def pdp_setup(*args):
     wait_ack(server_sock)
 
 def sendto_cloud(file_name, blocksize, server_sock):
-    """send 'blocksize' 'block_count' and file named 'file_name' to the cloud(server_sock)
-       4 bytes, 4 bytes for blocksize, block_count
-       blocksize bytes for block each time(block_count times)
+    """send 'file_name', file size and file named 'file_name' to the cloud(server_sock)
+       128 bytes, 4 bytes for file name, file size
+       blocksize bytes for block each time
     argument is same as above
     block_count -- global variable
     """
-    global block_count
     with open(file_name, 'rb') as fp:
         # send blocksize first and the number of blocks second
-        server_sock.send(struct.pack('L', socket.htonl(blocksize)))
-        server_sock.send(struct.pack('L', socket.htonl(block_count)))
+        file_info = struct.pack('128sL', file_name, os.stat(file_name).st_size)
+        server_sock.send(file_info)
         #send each block one by one
         while(True):
             data = fp.read(blocksize)
@@ -64,7 +63,6 @@ def wait_ack(server_sock):
     """send 'Done' tell cloud no data sent any more
        and the cloud should reply 'All Received'"""
     try:
-        time.sleep(2)
         server_sock.send('Done')
         reply = server_sock.recv(BUFF_SIZE)
     except socket.errno, e:
@@ -136,23 +134,23 @@ def request_serve(*args):
     try:
         key = get_tag_key(retrieve_key(key_file))
     except IOError, e:
-        print 'Error while reading key from disk'
+        print 'Error while reading key from disk', e
     try:
         send_key(key, server_sock)
     except socket.error, e:
-        print 'Error while sending key'
+        print 'Error while sending key', e
     try:
         blocksize, tag_len, tag_list = read_tags(tag_file)
     except IOError, e:
-        print 'Error while reading tags'
+        print 'Error while reading tags', e
     try:
         send_tags(blocksize, tag_len, tag_list, server_sock)
     except socket.error, e:
-        print 'Error while send tags'
+        print 'Error while send tags', e
     try:
         wait_good_news(server_sock)
     except socket.error, e:
-        print 'Oh! Worst News.'
+        print 'Oh! Worst News.\n', e
 
 def send_key(key, server_sock):
     """ send the key which generate tags to LC
@@ -192,13 +190,11 @@ def send_tags(blocksize, tag_len, tag_list, server_sock):
     server_sock.send(struct.pack('L', socket.htonl(tag_count)))
     for tag in tag_list:
         server_sock.send(tag)
-    time.sleep(1)
 
 def wait_good_news(server_sock):
     """ wait LC return the result of geolocation
     server_sock -- socket
     """
-    time.sleep(1)
     server_sock.send('Finished')
     good_news = server_sock.recv(BUFF_SIZE)
     print good_news
