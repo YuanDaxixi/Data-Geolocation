@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # created by YuanDa 2017-11
 
-import socket
+import socket, struct
 
 def is_valid_addr(server_addr):
     """check if the socket address is legal,
@@ -16,4 +16,4 @@ def is_valid_addr(server_addr):
         else:
             return False
     except:
-        return False
+        return False 

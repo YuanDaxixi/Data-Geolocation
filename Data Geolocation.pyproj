@@ -45,6 +45,9 @@
     <Compile Include="PDP\server.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="PDP\str2num.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="PDP\test.py">
       <SubType>Code</SubType>
     </Compile>

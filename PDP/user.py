@@ -8,11 +8,13 @@ from Crypto.Hash import SHA256
 from Crypto.Random import random
 import socket, struct, time, os
 from key import gen_key, get_tag_key, store_key, retrieve_key
+from str2num import *
 
 BLOCKSIZE = 4096
 TAG_LEN = SHA256.digest_size * 8
 KEY_LEN = 256
 BUFF_SIZE = 1024
+FILE_NAME = '128s'
 
 ################ PDP Setup Phase ################
 
@@ -51,7 +53,7 @@ def sendto_cloud(file_name, blocksize, server_sock):
     """
     with open(file_name, 'rb') as fp:
         # send blocksize first and the number of blocks second
-        file_info = struct.pack('128sL', file_name, os.stat(file_name).st_size)
+        file_info = struct.pack('128sL', file_name, os.stat(file_name).st_size) # may have bug without htonl
         server_sock.send(file_info)
         #send each block one by one
         while(True):
@@ -126,25 +128,26 @@ def gen_tag(block, key, hash_func = SHA256):
 def request_serve(*args):
     """ request LC geolocation user's data, and wait for the result
         invoked by user<->LC client
+    file_name -- the name of file to be located
     key_file -- the file storing the key
     tag_file -- the file storing blocksize, TAG_LEN and tags
     server_sock -- socket
     """
-    key_file, tag_file, server_sock = args
+    file_name, key_file, tag_file, server_sock = args
     try:
         key = get_tag_key(retrieve_key(key_file))
     except IOError, e:
         print 'Error while reading key from disk', e
     try:
-        send_key(key, server_sock)
+        send_info(file_name, key, server_sock)
     except socket.error, e:
         print 'Error while sending key', e
     try:
-        blocksize, tag_len, tag_list = read_tags(tag_file)
+        blocksize, tag_size, tag_list = read_tags(tag_file)
     except IOError, e:
         print 'Error while reading tags', e
     try:
-        send_tags(blocksize, tag_len, tag_list, server_sock)
+        send_tags(blocksize, tag_size, tag_list, server_sock)
     except socket.error, e:
         print 'Error while send tags', e
     try:
@@ -152,42 +155,45 @@ def request_serve(*args):
     except socket.error, e:
         print 'Oh! Worst News.\n', e
 
-def send_key(key, server_sock):
-    """ send the key which generate tags to LC
-        4 bytes for key-length, 32 bytes for key
+def send_info(file_name, key, server_sock):
+    """ send the file name and key which generate tags to LC; 
+        128 bytes for file name, 4 bytes for key-length, 32 bytes for key
+    file_name -- name of the file
     key -- the key mentioned above
     server_sock -- socket
     """
     key_inbytes = random.long_to_bytes(key)
     key_len = len(key_inbytes)
-    server_sock.send(struct.pack('L', socket.htonl(key_len)))
+    file_name = struct.pack('128s', file_name)
+    server_sock.send(file_name)
+    server_sock.send(ulong2str(key_len))
     server_sock.send(key_inbytes)
 
 def read_tags(tag_file):
-    """ read blocksize, TAG_LEN, and tags from disk, and return them
+    """ read blocksize, tag_size, and tags from disk, and return them
     tag_file -- name of the file storing datas mentioned above
     """
     tag_list = []
     with open(tag_file, 'rb') as fp:
         blocksize = struct.unpack('i', fp.read(4))[0]
-        tag_len = struct.unpack('i', fp.read(4))[0] / 8
+        tag_size = struct.unpack('i', fp.read(4))[0] / 8
         while True:
-            tag = fp.read(tag_len)
+            tag = fp.read(tag_size)
             if not tag:
                 break
             tag_list.append(tag)
-    return (blocksize, tag_len, tag_list)
+    return (blocksize, tag_size, tag_list)
 
-def send_tags(blocksize, tag_len, tag_list, server_sock):
-    """ send blocksize, tag_len and tags to LC
-        4 bytes, 4 bytes, 4 bytes for blocksize, tag_len, tag_count
-        tag_len bytes for tag each time(tag_count times)
+def send_tags(blocksize, tag_size, tag_list, server_sock):
+    """ send blocksize, tag_size and tags to LC
+        4 bytes, 4 bytes, 4 bytes for blocksize, tag_size, tag_count
+        tag_size bytes for tag each time(tag_count times)
     arguments is the same as functions' above
     """
     tag_count = len(tag_list)
-    server_sock.send(struct.pack('L', socket.htonl(blocksize)))
-    server_sock.send(struct.pack('L', socket.htonl(tag_len)))
-    server_sock.send(struct.pack('L', socket.htonl(tag_count)))
+    server_sock.send(ulong2str(blocksize))
+    server_sock.send(ulong2str(tag_size))
+    server_sock.send(ulong2str(tag_count))
     for tag in tag_list:
         server_sock.send(tag)
 
@@ -199,4 +205,4 @@ def wait_good_news(server_sock):
     good_news = server_sock.recv(BUFF_SIZE)
     print good_news
 
-################ Request Service END################
+################ Request Service END ################
