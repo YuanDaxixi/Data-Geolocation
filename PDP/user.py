@@ -201,8 +201,9 @@ def wait_good_news(server_sock):
     """ wait LC return the result of geolocation
     server_sock -- socket
     """
-    server_sock.send('Finished')
+    server_sock.send('So, where is it?')
     good_news = server_sock.recv(BUFF_SIZE)
     print good_news
+    server_sock.close()
 
 ################ Request Service END ################

@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
-# client interface(multithread)
+# client interface
 # created by YuanDa 2017-11
 
 import socket, struct, time
 from check_sockaddr import is_valid_addr
 from str2num import *
 
-# the argument func is the function binding to the new thread
-# the argument arg is passed to func in tuple type whose last
-# element is client's socket
-# the argument server_ip and server_port are valid ipv4 address
-# and port of the server which the client gonna connect
-def set_client(server_ip, server_port, func, *arg):
+def set_client(server_ip, server_port, func, *args):
+    """ a client interface providing function by func
+    func -- function the client should provide
+    args -- passed to func in tuple type whose last
+            element is socket
+    server_ip -- ipv4 address of the server
+    server_port -- port of the server
+    """
     server_addr = (server_ip, server_port)
     if not is_valid_addr(server_addr):
         print 'Please try again with a legal address'
@@ -20,7 +22,7 @@ def set_client(server_ip, server_port, func, *arg):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(server_addr)
     print 'Connecting to', server_ip, ':', server_port
-    func_arg = arg + (s,)
+    func_arg = args + (s,)
     func(*func_arg)
     s.close()
     print 'Connection closed.'
