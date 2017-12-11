@@ -2,11 +2,10 @@
 # user module
 # created by YuanDa 2017-11
 
-import Crypto
+import Crypto, socket, struct, time, os
 from Crypto.Hash import HMAC
 from Crypto.Hash import SHA256
 from Crypto.Random import random
-import socket, struct, time, os
 from key import gen_key, get_tag_key, store_key, retrieve_key
 from str2num import *
 

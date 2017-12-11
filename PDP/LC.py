@@ -58,7 +58,7 @@ def receive_metadata(user_sock):
     """
     file_name = user_sock.recv(struct.calcsize(FILE_NAME))
     key_len = user_sock.recv(4)
-    key = user_sock.recv(key_len)
+    key = user_sock.recv(str2ulong(key_len))
     blocksize = user_sock.recv(4)
     tag_size = str2ulong(user_sock.recv(4))
     tag_count = str2ulong(user_sock.recv(4))
@@ -95,8 +95,8 @@ def arrange_landmarks(landmarks, *metadata):
     step = len(nonce_list) // len(landmarks)
     i, arg, threads = 0, [], []
     for landmark in landmarks:
-        arg.append(pack_args(landmark, nonce_list[i*step : i+step], metadata))
-        new_thread = threading.Thread(target = inform_landmark, args = arg[-1])
+        arg.append(pack_args(landmark, nonce_list[i*step : (i+1)*step], metadata))
+        new_thread = threading.Thread(target = connect_landmark, args = arg[-1])
         new_thread.start()
         threads.append(new_thread)
         i += 1
@@ -181,13 +181,13 @@ def get_file_name(metadata):
 
 ################ Data Geolocation Service END ################
 
-################ Data Transfer between LC and Landmarks ################
+################ Transmission between LC and Landmarks ################
 
-def inform_landmark(ip, port, *args):
+def connect_landmark(ip, port, *args):
     """ LC send all useful data to the landmark and wait for latency
     ip -- ip address of the landmark server
     port -- port of the landmark server
-    *args -- file_name, key_len, key, blocksize, tag_size, nonce_count, nonce_list
+    args -- file_name, key_len, key, blocksize, tag_size, nonce_count, nonce_list
             detail seen below """
     #latencies[ip] = 1.0
     landmark_addr = (ip, port)
@@ -223,7 +223,8 @@ def transfer_data(landmark_sock, *args):
     landmark_sock.send(ulong2str(nonce_count))
     for index in nonce_list:
         landmark_sock.send(ulong2str(index))
-        landmark_sock.send(tags[index*tag_size : index+tag_size])
+        tag = tags[index*tag_size : (index+1)*tag_size]
+        landmark_sock.send(''.join(tag))
 
 def wait_latency(ip, landmark_sock):
     """ LC waits for landmark replying latency then save it
@@ -234,5 +235,6 @@ def wait_latency(ip, landmark_sock):
     temp = landmark_sock.recv(8)
     latency = str2double(temp)
     latencies[ip] = latency
+    print latency
 
-################ Data Transfer between LC and Landmarks END ################
+################ Transmission between LC and Landmarks END ################
