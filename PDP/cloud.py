@@ -100,6 +100,7 @@ def gen_proof(landmark):
     file_name = landmark.recv(struct.calcsize(FILE_NAME))
     file_name = struct.unpack(FILE_NAME, file_name)[0]
     file_name = file_name.strip('\00')
+    file_name = name_file(USER_ID, file_name)
     blocksize = str2ulong(landmark.recv(4))
 
     index = 0
