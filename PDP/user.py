@@ -14,6 +14,7 @@ TAG_LEN = SHA256.digest_size * 8
 KEY_LEN = 256
 BUFF_SIZE = 1024
 FILE_NAME = '128s'
+KEY_FILE = 'key'
 
 ################ PDP Setup Phase ################
 
@@ -84,7 +85,7 @@ def gen_metadata(file_name, output_name, blocksize = BLOCKSIZE, mode = 0):
         return False
     tag_list = gen_file_tag(file_name, blocksize, tag_key)
     store_file_tag(tag_list, output_name, blocksize)
-    store_key(key, 'key')
+    store_key(key, KEY_FILE)
 
 def gen_file_tag(file_name, blocksize, key, hash_func = SHA256):
     """generate the tag(list) for each block of file named 'file_name'

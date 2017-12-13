@@ -22,10 +22,11 @@ def locate_data(*args):
         and tell the user the result.
         invoked by LC<->user server
     whisper -- no use so fat
+    landmarks -- a list of tuple(ip, port)
     user_sock -- socket
     """
-    landmarks = [('127.0.0.1', 9999)]
-    whisper, user_sock = args
+    
+    landmarks, user_sock = args
     try:
         metadata = receive_metadata(user_sock)
     except socket.error, e:
