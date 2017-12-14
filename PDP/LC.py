@@ -73,6 +73,7 @@ def receive_tags(user_sock, tag_count, tag_size):
     the variable 'tags' is global
     """
     global tags
+    tags = []
     received = 0
     total = tag_count * tag_size
     while(received < total):
@@ -112,7 +113,7 @@ def calculate_location(landmarks):
     ips = [x[0] for x in landmarks]
     for ip in ips:
         if latencies[ip] > 0:
-            print "Xi'an"
+            pass # geolocation process
         else:
             print 'Failure'
     return "Xi'an"
@@ -190,7 +191,6 @@ def connect_landmark(ip, port, *args):
     port -- port of the landmark server
     args -- file_name, key_len, key, blocksize, tag_size, nonce_count, nonce_list
             detail seen below """
-    #latencies[ip] = 1.0
     landmark_addr = (ip, port)
     landmark_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     landmark_sock.connect(landmark_addr)
@@ -233,6 +233,7 @@ def wait_latency(ip, landmark_sock):
     landmark_sock -- socket
     """
     global latencies
+    latencies = {}
     temp = landmark_sock.recv(8)
     latency = str2double(temp)
     latencies[ip] = latency

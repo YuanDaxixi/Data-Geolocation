@@ -1,7 +1,13 @@
+from sockaddr import get_host_ip, query_port, query_ip
 from server import set_server
 from LC import locate_data
 
-self = ('127.0.0.1', 8888)
-Nazgul = [('127.0.0.1', 9999)] # the nine black riders owning nine rings
-
-set_server(self[0], self[1], 1, locate_data, Nazgul)
+if __name__ == '__main__':
+    self_ip = get_host_ip()
+    frs = query_port('frs')
+    Nazgul_ip = query_ip('Nazgul')
+    Nazgul_port = [query_port('grs')] * len(Nazgul_ip)
+    Nazgul = zip(Nazgul_ip, Nazgul_port) # the nine(maybe more in cloud) black riders owning nine rings
+    # Witch_King is leading Nazgul to track rings
+    set_server(self_ip, frs, 1, locate_data, Nazgul)
+    raw_input('Witch-King killed.')

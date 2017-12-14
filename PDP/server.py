@@ -3,7 +3,7 @@
 # created by YuanDa 2017-11
 
 import socket, threading, struct
-from check_sockaddr import is_valid_addr
+from sockaddr import is_valid_addr, is_valid_client
 from Crypto.Random import random
 from str2num import *
 
@@ -72,9 +72,3 @@ def test_func(*args):
         client.send('Good News!')
     print 'Connection %s closed' % client.getsockname()[0]
     client.close()
-
-def is_valid_client(ip):
-    """customize the function if needed,
-    it should check if the client connected is
-    a legal one, if so, return True, else False"""
-    return True

@@ -70,6 +70,7 @@ def receive_index_tag(size, count, lc_sock):
     lc_sock -- socket
     """
     global index_tag
+    index_tag = [] # no this, then bug!
     received = 0
     total = count * size
     while(received < total):
@@ -143,6 +144,7 @@ def measure_latency(blocksize, times, cloud_sock):
     # which constructs a list for a single challenge-response process, this list
     # is a element of t, that means t is list of list
     global proof, t
+    proof, t = '', [] # clear them after working at last time
     buf_size = blocksize + 4 # the 4bytes is for index which cloud should reply
     total = times * buf_size
     received, i = 0, 0 

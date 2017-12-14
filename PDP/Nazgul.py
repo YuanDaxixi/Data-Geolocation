@@ -1,7 +1,11 @@
+from sockaddr import get_host_ip, query_port, query_ip
 from server import set_server
 from landmark import follow_lc
 
-self = ('127.0.0.1', 9999)
-Baggins = [('115.28.188.42', 7778)]
-
-set_server(self[0], self[1], 1, follow_lc, Baggins[0], Baggins[1])
+if __name__ == '__main__':
+    self_ip = get_host_ip()
+    grs = query_port('grs')
+    Baggins = (query_ip('Baggins'), query_port('drs'))
+    # Nazgul is to follow Witch-King's order. Chase Baggins!
+    set_server(self_ip, grs, 1, follow_lc, Baggins[0], Baggins[1])
+    raw_input('Nazgul die.')

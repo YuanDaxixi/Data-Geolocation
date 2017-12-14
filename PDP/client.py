@@ -3,7 +3,7 @@
 # created by YuanDa 2017-11
 
 import socket, struct, time
-from check_sockaddr import is_valid_addr
+from sockaddr import is_valid_addr
 from str2num import *
 
 def set_client(server_ip, server_port, func, *args):
