@@ -1,0 +1,16 @@
+Here are some bad news:
+
+1: struct.calcsize('L') get 4 bytes on win7 but 8 bytes on centos7.0,
+   so naively modify 'L' to 'I' on centos7 though it may cause bug,
+   nearly each *.py file includes 'L', remember to modify them all.
+
+2: the ip address is default set to 127.0.0.1, so modify it when 
+   deploy it in sockaddr.py.
+   
+3: install pycrypto before run it.
+
+4: I used several global variable, it cause some disgusting bug which has been solved,
+   but the sulotion looks ugly...(naively set them empty before next use) 
+
+*: the code is not elegant, just bear it.
+   if I can remember something, I'll add it above
