@@ -4,13 +4,13 @@
 import socket, struct
 
 def str2ulong(str):
-    return socket.ntohl(struct.unpack('L', str)[0])
+    return socket.ntohl(struct.unpack('I', str)[0])
 
 def str2double(str):
     return struct.unpack('d', str)[0]
 
 def ulong2str(num):
-    return struct.pack('L', socket.htonl(num))
+    return struct.pack('I', socket.htonl(num))
 
 def double2str(num):
     return struct.pack('d', num)

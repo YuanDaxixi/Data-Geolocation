@@ -4,6 +4,7 @@ from LC import locate_data
 
 if __name__ == '__main__':
     self_ip = get_host_ip()
+    self_ip = query_ip('Witch_King') # delete this line when deploy
     frs = query_port('frs')
     Nazgul_ip = query_ip('Nazgul')
     Nazgul_port = [query_port('grs')] * len(Nazgul_ip)

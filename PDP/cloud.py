@@ -48,9 +48,9 @@ def receive_and_store(user_id, user_sock):
     user_sock -- socket
     """
     # 128 bytes for file name, 4 bytes for file size
-    fileinfo_size = struct.calcsize(FILE_NAME+'L')
+    fileinfo_size = struct.calcsize(FILE_NAME+'I')
     file_info = user_sock.recv(fileinfo_size)
-    file_name, file_size = struct.unpack(FILE_NAME+'L', file_info)
+    file_name, file_size = struct.unpack(FILE_NAME+'I', file_info)
     new_name = name_file(user_id, file_name.strip('\00'))
     received = 0
     # receive the file

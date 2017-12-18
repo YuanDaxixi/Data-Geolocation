@@ -194,14 +194,18 @@ def handle_latency(passed):
     passed -- True for passed, False for not passed
     """
     global t
+    fp = open('DRtt.txt', 'w')
     if not passed:
         return -1.0
     for time_stamp in t:
         start = time_stamp[0]
         for end in time_stamp[1:]:
             latency = end - start
+            fp.write(str(latency)+ ' ')
             print latency, 's'
+        fp.write('\n')
         print '--------'
     latency = min([time_stamp[1] - time_stamp[0] for time_stamp in t])
+    fp.close()
     return latency
 ################ Challenge-Response END ################
