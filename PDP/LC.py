@@ -54,16 +54,18 @@ def receive_metadata(user_sock):
     """ LC receive metadata from user, 128 bytes for file name,
         4 bytes for key length, key_len bytes for key, 4 bytes
         for blocksize, 4 bytes for tag size, 4 bytes for tag count
+        and 4 bytes for cloud ip address
     return these metadata in tuple
     user_sock -- socket
     """
     file_name = user_sock.recv(struct.calcsize(FILE_NAME))
     key_len = user_sock.recv(4)
-    key = user_sock.recv(str2ulong(key_len))
+    key = user_sock.recv(str2uint(key_len))
     blocksize = user_sock.recv(4)
-    tag_size = str2ulong(user_sock.recv(4))
-    tag_count = str2ulong(user_sock.recv(4))
-    return (file_name, key_len, key, blocksize, tag_size, tag_count)
+    cloud_ip = user_sock.recv(4)
+    tag_size = str2uint(user_sock.recv(4))
+    tag_count = str2uint(user_sock.recv(4))
+    return (file_name, key_len, key, blocksize, tag_size, cloud_ip, tag_count)
 
 def receive_tags(user_sock, tag_count, tag_size):
     """ LC receive tags from user
@@ -134,7 +136,6 @@ def pack_args(landmark, nonce_list, metadata):
     nonce_list -- random indexes for the landmark
     metadata -- a tuple including many data, detail seen above
     """
-    file_name, key_len, key, blocksize, tag_size = metadata[0:-1]
     ip = landmark[0]
     port = landmark[1]
     file_name = get_file_name(metadata)
@@ -142,9 +143,10 @@ def pack_args(landmark, nonce_list, metadata):
     key = get_key(metadata)
     blocksize = get_blocksize(metadata)
     tag_size = get_tag_size(metadata)
+    cloud_ip = get_cloud_ip(metadata)
     nonce_count = len(nonce_list)
     
-    return (ip, port, file_name, key_len, key, blocksize, tag_size, nonce_count, nonce_list[:])
+    return (ip, port, file_name, key_len, key, blocksize, tag_size, cloud_ip, nonce_count, nonce_list[:])
 
 def gen_nonce_list(total, landmark_num):
     """ generate random indexes for all landmarks in a big list,
@@ -164,6 +166,9 @@ def gen_nonce_list(total, landmark_num):
     return random.sample(range(total), n)
 
 def get_tag_count(metadata):
+    return metadata[-1]
+
+def get_cloud_ip(metadata):
     return metadata[5]
 
 def get_tag_size(metadata):
@@ -214,16 +219,17 @@ def transfer_data(landmark_sock, *args):
     tags -- global, list of character
     """
     global tags
-    file_name, key_len, key, blocksize, tag_size, nonce_count, nonce_list = args
+    file_name, key_len, key, blocksize, tag_size, cloud_ip, nonce_count, nonce_list = args
     landmark_sock.send(file_name)
     landmark_sock.send(key_len)
     landmark_sock.send(key)
     landmark_sock.send(blocksize)
     # 4 variables above are string, 2 below are usigned long
-    landmark_sock.send(ulong2str(tag_size))
-    landmark_sock.send(ulong2str(nonce_count))
+    landmark_sock.send(uint2str(tag_size))
+    landmark_sock.send(cloud_ip)
+    landmark_sock.send(uint2str(nonce_count))
     for index in nonce_list:
-        landmark_sock.send(ulong2str(index))
+        landmark_sock.send(uint2str(index))
         tag = tags[index*tag_size : (index+1)*tag_size]
         landmark_sock.send(''.join(tag))
 

@@ -101,13 +101,13 @@ def gen_proof(landmark):
     file_name = struct.unpack(FILE_NAME, file_name)[0]
     file_name = file_name.strip('\00')
     file_name = name_file(USER_ID, file_name)
-    blocksize = str2ulong(landmark.recv(4))
+    blocksize = str2uint(landmark.recv(4))
 
     index = 0
     with open(file_name, 'rb') as fp:
         while True:
             index_net = landmark.recv(4)
-            index = str2ulong(index_net)
+            index = str2uint(index_net)
             if index == 4294967295L:
                 break
             block = retrieve_block(index, blocksize, fp)

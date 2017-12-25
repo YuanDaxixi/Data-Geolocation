@@ -10,17 +10,20 @@ if __name__ == '__main__':
            3. Give up.')
     while True:
         option = raw_input('Enter: ')
-        if option == '1':
+        for Baggins in shire:           
+            if option == '1':
             # Sauron wants to store his rings in Baggins' Bag End
-            for Baggins in shire:           
                 try:
                     set_client(Baggins, query_port('krs'), pdp_setup, 'Rings', 'Orcs', 4096, 0)
                 except socket.error, e:
                     print 'This Baggins not at home', e
             # Sauron wants to find his rings now
-        elif option == '2': 
-            set_client(Witch_King[0], Witch_King[1], request_serve, 'Rings', 'key', 'Orcs')
-        else:
+            elif option == '2': 
+                try:
+                    set_client(Witch_King[0], Witch_King[1], request_serve, 'Rings', 'key', 'Orcs', Baggins)
+                except socket.error, e:
+                    print 'This Baggins has run', e
+            else:
             # Sauron knows he can't see his rings anymore
-            raw_input('Enter any key to continue.')
-            break
+                break
+        raw_input('You entered a dead loop, happy?')

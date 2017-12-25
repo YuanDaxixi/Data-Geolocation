@@ -45,11 +45,11 @@ def test_func(*args):
     file_name = client.recv(struct.calcsize('128s'))
     file_name = struct.unpack('128s', file_name)[0]
     file_name = file_name.strip('\00')
-    key_len = str2ulong(client.recv(4))
+    key_len = str2uint(client.recv(4))
     key = random.bytes_to_long(client.recv(key_len))
-    blocksize = str2ulong(client.recv(4))
-    tag_size = str2ulong(client.recv(4))
-    tag_count = str2ulong(client.recv(4))
+    blocksize = str2uint(client.recv(4))
+    tag_size = str2uint(client.recv(4))
+    tag_count = str2uint(client.recv(4))
     print key_len
     print key
     print blocksize

@@ -8,7 +8,8 @@ from Crypto.Hash import SHA256
 from Crypto.Random import random
 from client import set_client
 from str2num import *
-from LC import get_tag_count, get_tag_size
+from sockaddr import get_host_ip
+from LC import get_tag_count, get_tag_size, get_cloud_ip
 
 FILE_NAME = '128s'
 index_tag = [] # record indexes and tags received from LC
@@ -21,11 +22,10 @@ def follow_lc(*args):
         cloud, gets many latencies after all challenge-response, and pick
         a suitable latency which should be transferred to lc.
         invoked by LC<->landmark server
-    cloud_ip -- ip address of cloud
     cloud_port -- port of cloud
     lc_sock -- socket
     """
-    cloud_ip, cloud_port, lc_sock = args
+    cloud_port, lc_sock = args
     try:
         meta = receive_metadata(lc_sock)
     except socket.error, e:
@@ -39,6 +39,7 @@ def follow_lc(*args):
     except:
         print 'Error while packing'
     try:
+        cloud_ip = net2ip(get_cloud_ip(meta))
         latency = challenge(cloud_ip, cloud_port, *meta)
         reply_lc(latency, lc_sock)
     except socket.error, e:
@@ -54,12 +55,13 @@ def receive_metadata(lc_sock):
     file_name = lc_sock.recv(struct.calcsize(FILE_NAME))
     file_name = struct.unpack(FILE_NAME, file_name)[0]
     file_name = file_name.strip('\00')
-    key_len = str2ulong(lc_sock.recv(4))
+    key_len = str2uint(lc_sock.recv(4))
     key = random.bytes_to_long(lc_sock.recv(key_len))
-    blocksize = str2ulong(lc_sock.recv(4))
-    tag_size = str2ulong(lc_sock.recv(4))
-    tag_count = str2ulong(lc_sock.recv(4))
-    return (file_name, key_len, key, blocksize, tag_size, tag_count)
+    blocksize = str2uint(lc_sock.recv(4))
+    tag_size = str2uint(lc_sock.recv(4))
+    cloud_ip = lc_sock.recv(4)
+    tag_count = str2uint(lc_sock.recv(4))
+    return (file_name, key_len, key, blocksize, tag_size, cloud_ip, tag_count)
 
 def receive_index_tag(size, count, lc_sock):
     """ landmark receive the random indexes and corresponding tags from
@@ -94,7 +96,7 @@ def pack_index_tag(size, count):
     for i in xrange(count):
         start = i * size
         temp = ''.join(index_tag[start:start + size])
-        index = str2ulong(temp[:index_size])
+        index = str2uint(temp[:index_size])
         tag = temp[index_size:]
         index_tag_list.append((index, tag))
     index_tag = index_tag_list
@@ -117,16 +119,16 @@ def challenge(cloud_ip, cloud_port, *metadata):
     tag_size -- size(bytes) of tag
     count -- total number of challenges(of tags, of indexes)
     """
-    file_name, key_len, key, blocksize, tag_size, count = metadata
+    file_name, key_len, key, blocksize, tag_size, no_use, count = metadata
     cloud_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     cloud_sock.connect((cloud_ip, cloud_port))
     print 'Connecting to', cloud_ip, ':', cloud_port
     cloud_sock.send(struct.pack(FILE_NAME, file_name)) # cloud need know the file name
-    cloud_sock.send(ulong2str(blocksize)) # cloud need know the size of each block
+    cloud_sock.send(uint2str(blocksize)) # cloud need know the size of each block
     measure_latency(blocksize, count, cloud_sock)
-    cloud_sock.send(ulong2str(4294967295)) # -1 tells cloud finish
+    cloud_sock.send(uint2str(4294967295)) # -1 tells cloud finish
     passed = verify_proof(blocksize, key)
-    latency = handle_latency(passed)
+    latency = handle_latency(passed, cloud_ip)
     cloud_sock.close()
     print 'Connection closed.'
     return latency
@@ -152,15 +154,15 @@ def measure_latency(blocksize, times, cloud_sock):
     while(received < total):
         # once a whole block received, it restart the timer
         if received % buf_size == 0:       
-            cloud_sock.send(ulong2str(index_tag[i][0]))
-            t.append([time.time()])
+            cloud_sock.send(uint2str(index_tag[i][0]))
+            t.append([time.clock()]) # time.clock() on win32, time.time() on linux
             i += 1   
         unreceived = total - received
         if unreceived >= buf_size:
             proof += cloud_sock.recv(buf_size)
         else:
             proof += cloud_sock.recv(unreceived)
-        t[i-1].append(time.time())
+        t[i-1].append(time.clock()) # same as above
         received = len(proof)
 
 def verify_proof(blocksize, key, hash_func = SHA256):
@@ -174,7 +176,7 @@ def verify_proof(blocksize, key, hash_func = SHA256):
     key = random.long_to_bytes(key)
     for pair in index_tag:
         temp = proof[i*size : (i+1)*size]
-        index = str2ulong(temp[:4])
+        index = str2uint(temp[:4])
         block = temp[4:]
         if pair[0] != index: # verify index first
             print 'Index not match!'
@@ -188,24 +190,26 @@ def verify_proof(blocksize, key, hash_func = SHA256):
         i += 1
     return True
 
-def handle_latency(passed):
+def handle_latency(passed, cloud_ip):
     """ pick only one latency using some strategy, if proof
         doesn't pass verification before, return -1.0
     passed -- True for passed, False for not passed
+    cloud_ip -- cloud ip address
     """
     global t
-    fp = open('DRtt.txt', 'w')
     if not passed:
         return -1.0
-    for time_stamp in t:
-        start = time_stamp[0]
-        for end in time_stamp[1:]:
-            latency = end - start
-            fp.write(str(latency)+ ' ')
-            print latency, 's'
-        fp.write('\n')
-        print '--------'
+    report_name = get_host_ip() + '.txt'
+    with open(report_name, 'a') as fp:
+        fp.write('target:' + cloud_ip + '\n')
+        for time_stamp in t:
+            start = time_stamp[0]
+            for end in time_stamp[1:]:
+                latency = end - start
+                fp.write(str(latency)+ ' ')
+                print latency, 's'
+            fp.write('\n')
+            print '--------'
     latency = min([time_stamp[1] - time_stamp[0] for time_stamp in t])
-    fp.close()
     return latency
 ################ Challenge-Response END ################

@@ -131,23 +131,24 @@ def request_serve(*args):
     file_name -- the name of file to be located
     key_file -- the file storing the key
     tag_file -- the file storing blocksize, TAG_LEN and tags
+    cloud_ip -- cloud ip address
     server_sock -- socket
     """
-    file_name, key_file, tag_file, server_sock = args
+    file_name, key_file, tag_file, cloud_ip, server_sock = args
     try:
         key = get_tag_key(retrieve_key(key_file))
     except IOError, e:
         print 'Error while reading key from disk', e
     try:
-        send_info(file_name, key, server_sock)
-    except socket.error, e:
-        print 'Error while sending key', e
-    try:
         blocksize, tag_size, tag_list = read_tags(tag_file)
     except IOError, e:
         print 'Error while reading tags', e
     try:
-        send_tags(blocksize, tag_size, tag_list, server_sock)
+        send_info(file_name, key, blocksize, cloud_ip, server_sock)
+    except socket.error, e:
+        print 'Error while sending key', e
+    try:
+        send_tags(tag_size, tag_list, server_sock)
     except socket.error, e:
         print 'Error while send tags', e
     try:
@@ -155,9 +156,10 @@ def request_serve(*args):
     except socket.error, e:
         print 'Oh! Worst News.\n', e
 
-def send_info(file_name, key, server_sock):
+def send_info(file_name, key, blocksize, cloud_ip, server_sock):
     """ send the file name and key which generate tags to LC; 
         128 bytes for file name, 4 bytes for key-length, 32 bytes for key
+        4 bytes for blocksize, and 4 bytes for cloud ip address
     file_name -- name of the file
     key -- the key mentioned above
     server_sock -- socket
@@ -166,8 +168,10 @@ def send_info(file_name, key, server_sock):
     key_len = len(key_inbytes)
     file_name = struct.pack('128s', file_name)
     server_sock.send(file_name)
-    server_sock.send(ulong2str(key_len))
+    server_sock.send(uint2str(key_len))
     server_sock.send(key_inbytes)
+    server_sock.send(uint2str(blocksize))
+    server_sock.send(ip2net(cloud_ip))
 
 def read_tags(tag_file):
     """ read blocksize, tag_size, and tags from disk, and return them
@@ -184,16 +188,15 @@ def read_tags(tag_file):
             tag_list.append(tag)
     return (blocksize, tag_size, tag_list)
 
-def send_tags(blocksize, tag_size, tag_list, server_sock):
+def send_tags(tag_size, tag_list, server_sock):
     """ send blocksize, tag_size and tags to LC
-        4 bytes, 4 bytes, 4 bytes for blocksize, tag_size, tag_count
+        4 bytes, 4 bytes for tag_size, tag_count and
         tag_size bytes for tag each time(tag_count times)
     arguments is the same as functions' above
     """
     tag_count = len(tag_list)
-    server_sock.send(ulong2str(blocksize))
-    server_sock.send(ulong2str(tag_size))
-    server_sock.send(ulong2str(tag_count))
+    server_sock.send(uint2str(tag_size))
+    server_sock.send(uint2str(tag_count))
     for tag in tag_list:
         server_sock.send(tag)
 

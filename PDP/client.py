@@ -34,7 +34,7 @@ def test_func(*args):
     nonce_list = [1, 5, 50, 500, 5000]
     file_name = struct.pack('128s', file_name)
     server_sock.send(file_name)
-    server_sock.send(ulong2str(blocksize))
+    server_sock.send(uint2str(blocksize))
 
     buf_size = blocksize + 4
     total = len(nonce_list) * buf_size
@@ -44,7 +44,7 @@ def test_func(*args):
     t = []
     while(received < total):
         if received % buf_size == 0:       
-            server_sock.send(ulong2str(nonce_list[i]))
+            server_sock.send(uint2str(nonce_list[i]))
             t.append([time.time()])
             i += 1   
         unreceived = total - received
@@ -55,7 +55,7 @@ def test_func(*args):
         t[i-1].append(time.time())
         received = len(buf)
 
-    server_sock.send(ulong2str(4294967295))
+    server_sock.send(uint2str(4294967295))
     for i in range(len(nonce_list)):
         i *= buf_size
         index, whisper = struct.unpack('L4096s', buf[i : i+buf_size])
