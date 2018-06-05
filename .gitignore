@@ -8,3 +8,6 @@
 key
 Rings
 Orcs
+*.pickle
+*.rtt
+*.exe
