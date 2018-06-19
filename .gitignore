@@ -11,3 +11,6 @@ Orcs
 *.pickle
 *.rtt
 *.exe
+.config
+*.dat
+*.route

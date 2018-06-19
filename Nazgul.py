@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from sockaddr import get_host_ip, query_port, query_ip
 from server import set_server
 from landmark import follow_lc

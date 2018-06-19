@@ -11,7 +11,7 @@ from sklearn.neighbors import KernelDensity
 class Rtt_Pdfs():
     """create a 2-d table whose indice are cities, value is pdf of their RTT"""
 
-    def __init__(self, file_list = [], path = './rtt/'):
+    def __init__(self, file_list = [], path = './resources/rtt/'):
         """<file_list> contains a list of files which save RTTs"""
         self.files = file_list
         self.path = path
@@ -38,7 +38,7 @@ class Rtt_Pdfs():
                 raise
             lines = [line.split() for line in fp.readlines()]
             for line in lines:
-                dst_city, rtts = line[0].decode('utf-8'), [[float(line)] for line in line[1:]]
+                dst_city, rtts = line[0].decode('utf-8'), [[float(rtt)] for rtt in line[1:]]
                 kde = KernelDensity(bandwidth=1).fit(rtts)
                 dic[src_city][dst_city] = kde
         self.pdfs = DataFrame(dic)

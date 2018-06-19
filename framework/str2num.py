@@ -3,6 +3,15 @@
 # functions only used before transfer data on network(socket)
 import socket, struct
 
+NONE = 'none'
+GEOINFO = 'dII128s'
+FILE_NAME = '128s'
+DOUBLE = 'd'
+INT = 'I'
+INT_SIZE = struct.calcsize(INT)
+DOUBLE_SIZE = struct.calcsize(DOUBLE)
+FINISH = 4294967295
+
 def str2uint(str):
     return socket.ntohl(struct.unpack('I', str)[0])
 

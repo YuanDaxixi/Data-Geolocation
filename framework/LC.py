@@ -6,10 +6,9 @@ import socket, struct, threading
 from client import set_client
 from Crypto.Random import random
 from str2num import *
+from sockaddr import receive
 
-FILE_NAME = '128s'
-
-latencies = {} # record latency that each landmark gets, key is landmark's ip, value is latency
+geo_info = {} # record latency that each landmark gets, key is landmark's ip, value is latency
 tags = [] # record tags received from user
 
 ################ Data Geolocation Service ################
@@ -58,13 +57,13 @@ def receive_metadata(user_sock):
     return these metadata in tuple
     user_sock -- socket
     """
-    file_name = user_sock.recv(struct.calcsize(FILE_NAME))
-    key_len = user_sock.recv(4)
-    key = user_sock.recv(str2uint(key_len))
-    blocksize = user_sock.recv(4)
-    cloud_ip = user_sock.recv(4)
-    tag_size = str2uint(user_sock.recv(4))
-    tag_count = str2uint(user_sock.recv(4))
+    file_name = receive(user_sock, struct.calcsize(FILE_NAME))
+    key_len = receive(user_sock, INT_SIZE)
+    key = receive(user_sock, str2uint(key_len))
+    blocksize = receive(user_sock, INT_SIZE)
+    cloud_ip = receive(user_sock, INT_SIZE)
+    tag_size = str2uint(receive(user_sock, INT_SIZE))
+    tag_count = str2uint(receive(user_sock, INT_SIZE))
     return (file_name, key_len, key, blocksize, tag_size, cloud_ip, tag_count)
 
 def receive_tags(user_sock, tag_count, tag_size):
@@ -76,15 +75,9 @@ def receive_tags(user_sock, tag_count, tag_size):
     """
     global tags
     tags = []
-    received = 0
-    total = tag_count * tag_size
-    while(received < total):
-        unreceived = total - received
-        if unreceived >= tag_size:
-            tags += user_sock.recv(tag_size)
-        else:
-            tags += user_sock.recv(unreceived)
-        received = len(tags)
+    for i in range(tag_count):
+        tags.append(receive(user_sock, tag_size))
+
 
 def arrange_landmarks(landmarks, *metadata):
     """ LC arrange the landmarks to challenge the cloud;
@@ -108,13 +101,13 @@ def arrange_landmarks(landmarks, *metadata):
         t.join()
 
 def calculate_location(landmarks):
-    """ given latencies, calculate the location of the data
+    """ given geo_info, calculate the location of the data
     landmarks -- list of (ip, port) of each landmarks
     """
-    global latencies
+    global geo_info
     ips = [x[0] for x in landmarks]
     for ip in ips:
-        if latencies[ip] > 0:
+        if geo_info[ip][0] > 0:
             pass # geolocation process
         else:
             print 'Failure'
@@ -122,7 +115,7 @@ def calculate_location(landmarks):
 
 def reply_user(user_sock, result):
     """ send the result to user """
-    say_goodbye = user_sock.recv(1024)
+    say_goodbye = user_sock.recv(128)
     if say_goodbye == 'So, where is it?':
         user_sock.send(result)
     else:
@@ -198,6 +191,7 @@ def connect_landmark(ip, port, *args):
             detail seen below """
     landmark_addr = (ip, port)
     landmark_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    landmark_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     landmark_sock.connect(landmark_addr)
     print 'Connecting to', ip, ':', port
 
@@ -224,25 +218,26 @@ def transfer_data(landmark_sock, *args):
     landmark_sock.send(key_len)
     landmark_sock.send(key)
     landmark_sock.send(blocksize)
-    # 4 variables above are string, 2 below are usigned long
     landmark_sock.send(uint2str(tag_size))
     landmark_sock.send(cloud_ip)
     landmark_sock.send(uint2str(nonce_count))
     for index in nonce_list:
         landmark_sock.send(uint2str(index))
-        tag = tags[index*tag_size : (index+1)*tag_size]
-        landmark_sock.send(''.join(tag))
+        tag = tags[index]
+        landmark_sock.send(tag)
 
 def wait_latency(ip, landmark_sock):
-    """ LC waits for landmark replying latency then save it
+    """ LC waits for landmark replying latency, frequency, hop, city,
+    then save it.
     ip -- ip address of the landmark
     landmark_sock -- socket
     """
-    global latencies
-    latencies = {}
-    temp = landmark_sock.recv(8)
-    latency = str2double(temp)
-    latencies[ip] = latency
-    print latency
+    global geo_info
+    geo_info = {}
+    format = GEOINFO
+    temp = receive(landmark_sock, struct.calcsize(format))
+    latency, frequency, hop, city = struct.unpack(format, temp)
+    geo_info[ip] = (latency, socket.ntohl(frequency), socket.ntohl(hop), city.strip('\00'))
+    print latency, frequency, hop, city
 
 ################ Transmission between LC and Landmarks END ################

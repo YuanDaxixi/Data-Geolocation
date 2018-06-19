@@ -20,6 +20,7 @@ def set_client(server_ip, server_port, func, *args):
         return False
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.connect(server_addr)
     print 'Connecting to', server_ip, ':', server_port
     func_arg = args + (s,)

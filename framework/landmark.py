@@ -2,17 +2,18 @@
 # landmark module
 # created by YuanDa 2017-12
 
-import socket, struct, time
+import socket, struct, time, os
 from Crypto.Hash import HMAC
 from Crypto.Hash import SHA256
 from Crypto.Random import random
 from client import set_client
 from str2num import *
-from sockaddr import get_host_ip
+from sockaddr import get_host_ip, receive
 from LC import get_tag_count, get_tag_size, get_cloud_ip
+from netools import traceroute
+from core_route import RouteTable
 
-FILE_NAME = '128s'
-index_tag = [] # record indexes and tags received from LC
+index_tag = '' # record indexes and tags received from LC
 proof = '' # record proofs returned from cloud
 t = [] # record latency between each challenge and response
 
@@ -31,17 +32,19 @@ def follow_lc(*args):
     except socket.error, e:
         print 'Error while receiving metadata from LC', e
     try:
-        receive_index_tag(get_tag_size(meta) + 4, get_tag_count(meta), lc_sock)
+        receive_index_tag(get_tag_size(meta) + INT_SIZE, get_tag_count(meta), lc_sock)
     except socket.error, e:
         print 'Error while receiving indexes-tags from LC', e
     try:
-        pack_index_tag(get_tag_size(meta) + 4, get_tag_count(meta))
+        pack_index_tag(get_tag_size(meta) + INT_SIZE, get_tag_count(meta))
     except:
         print 'Error while packing'
     try:
         cloud_ip = net2ip(get_cloud_ip(meta))
         latency = challenge(cloud_ip, cloud_port, *meta)
-        reply_lc(latency, lc_sock)
+        trace = geotrace(cloud_ip)
+        geoinfo = [latency] + trace
+        reply_lc(geoinfo, lc_sock)
     except socket.error, e:
         print 'Error while challenging cloud', e
 
@@ -55,12 +58,12 @@ def receive_metadata(lc_sock):
     file_name = lc_sock.recv(struct.calcsize(FILE_NAME))
     file_name = struct.unpack(FILE_NAME, file_name)[0]
     file_name = file_name.strip('\00')
-    key_len = str2uint(lc_sock.recv(4))
-    key = random.bytes_to_long(lc_sock.recv(key_len))
-    blocksize = str2uint(lc_sock.recv(4))
-    tag_size = str2uint(lc_sock.recv(4))
-    cloud_ip = lc_sock.recv(4)
-    tag_count = str2uint(lc_sock.recv(4))
+    key_len = str2uint(receive(lc_sock, INT_SIZE))
+    key = random.bytes_to_long(receive(lc_sock, key_len))
+    blocksize = str2uint(receive(lc_sock, INT_SIZE))
+    tag_size = str2uint(receive(lc_sock, INT_SIZE))
+    cloud_ip = receive(lc_sock, INT_SIZE)
+    tag_count = str2uint(receive(lc_sock, INT_SIZE))
     return (file_name, key_len, key, blocksize, tag_size, cloud_ip, tag_count)
 
 def receive_index_tag(size, count, lc_sock):
@@ -72,38 +75,34 @@ def receive_index_tag(size, count, lc_sock):
     lc_sock -- socket
     """
     global index_tag
-    index_tag = [] # no this, then bug!
-    received = 0
-    total = count * size
-    while(received < total):
-        unreceived = total - received
-        if unreceived >= size:
-            index_tag += lc_sock.recv(size)
-        else:
-            index_tag += lc_sock.recv(unreceived)
-        received = len(index_tag)
+    index_tag = receive(lc_sock, count * size, size)
 
-def pack_index_tag(size, count):
-    """ in global variable index_tag, the data format is a character list,
+
+def pack_index_tag(size, count, index_size = 4):
+    """ in global variable index_tag, the data format is a string,
         this function tranformed it into a (integer, string) list, index is
         integer, tag is string.
     size -- size(bytes) of a index + tag
     count -- total number of tags(or indexes)
+    index_size -- bytes of a index
     """
     global index_tag
     index_tag_list = []
-    index_size = 4
     for i in xrange(count):
         start = i * size
-        temp = ''.join(index_tag[start:start + size])
+        temp = index_tag[start:start + size]
         index = str2uint(temp[:index_size])
         tag = temp[index_size:]
         index_tag_list.append((index, tag))
     index_tag = index_tag_list
 
-def reply_lc(latency, lc_sock):
-    """ landmark transfer the latency to LC """
-    lc_sock.send(double2str(latency))
+def reply_lc(geoinfo, lc_sock):
+    """ landmark transfer the latency, frequency, hop, city to LC """
+    latency, frequency, hop, city = geoinfo[:]
+    latency = double2str(latency)
+    frequency = uint2str(frequency)
+    hop = uint2str(hop)
+    lc_sock.send(struct.pack(GEOINFO, latency, frequency, hop, city))
 ################ Transmission between LC and Landmarks END ################
 
 ################ Challenge-Response ################
@@ -126,12 +125,29 @@ def challenge(cloud_ip, cloud_port, *metadata):
     cloud_sock.send(struct.pack(FILE_NAME, file_name)) # cloud need know the file name
     cloud_sock.send(uint2str(blocksize)) # cloud need know the size of each block
     measure_latency(blocksize, count, cloud_sock)
-    cloud_sock.send(uint2str(4294967295)) # -1 tells cloud finish
+    cloud_sock.send(uint2str(FINISH)) # -1 tells cloud finish
     passed = verify_proof(blocksize, key)
     latency = handle_latency(passed, cloud_ip)
     cloud_sock.close()
     print 'Connection closed.'
     return latency
+
+def geotrace(cloud_ip, path = u'./resources/route/'):
+    with open('.config', 'r') as fp:
+        my_city = fp.readline().split()[-1].decode('utf-8')
+        path += my_city + u'.route'
+    t = traceroute.Tracert()
+    trace_info = t.traceroute(cloud_ip).reverse()
+    route_table = RouteTable(path, my_city)
+    route_table.load(path)
+    for hop, trace in enumerate(trace_info):
+        ip = trace[2]
+        weights = route_table.weight(ip)
+        if weights:
+            result = list(max(weights, key = lambda x: x[1]))
+            result.reverse()
+            return result.insert(1, hop)
+    return [0, 0, NONE]
 
 def measure_latency(blocksize, times, cloud_sock):
     """ landmark challenges cloud for many times, a challenge includes
@@ -147,22 +163,26 @@ def measure_latency(blocksize, times, cloud_sock):
     # is a element of t, that means t is list of list
     global proof, t
     proof, t = '', [] # clear them after working at last time
-    buf_size = blocksize + 4 # the 4bytes is for index which cloud should reply
+    buf_size = blocksize + INT_SIZE # the 4bytes is for index which cloud should reply
     total = times * buf_size
     received, i = 0, 0 
-
+    if os.name == 'nt': # time.clock() on win32, time.time() on linux
+        getime = time.clock()
+    else:
+        getime = time.time()
+    getime()
     while(received < total):
         # once a whole block received, it restart the timer
         if received % buf_size == 0:       
             cloud_sock.send(uint2str(index_tag[i][0]))
-            t.append([time.clock()]) # time.clock() on win32, time.time() on linux
+            t.append([getime()])
             i += 1   
         unreceived = total - received
         if unreceived >= buf_size:
             proof += cloud_sock.recv(buf_size)
         else:
             proof += cloud_sock.recv(unreceived)
-        t[i-1].append(time.clock()) # same as above
+        t[i-1].append(getime())
         received = len(proof)
 
 def verify_proof(blocksize, key, hash_func = SHA256):
@@ -205,11 +225,11 @@ def handle_latency(passed, cloud_ip):
         for time_stamp in t:
             start = time_stamp[0]
             for end in time_stamp[1:]:
-                latency = end - start
-                fp.write(str(latency)+ ' ')
-                print latency, 's'
+                latency = (end - start) * 1000
+                fp.write(str(latency) + 'ms ')
+                print latency, 'ms'
             fp.write('\n')
             print '--------'
     latency = min([time_stamp[1] - time_stamp[0] for time_stamp in t])
-    return latency
+    return latency * 1000
 ################ Challenge-Response END ################

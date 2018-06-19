@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from sockaddr import get_host_ip, query_port, query_ip
 from server import set_server
 from cloud import serve_user, response
@@ -6,6 +8,9 @@ MAX_ENEMY = 10
 
 if __name__ == '__main__':
     self_ip = get_host_ip()
+    self_ip = '127.0.0.1' # to be deleted
+    import os
+    os.chdir('G:\\programmer yuan\\学位论文\\code\\the king of the ring'.decode('utf-8'))
     krs = query_port('krs')
     drs = query_port('drs')
     print('1. Take Rings from Sauron.    2. Take rings to escape.\

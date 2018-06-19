@@ -4,10 +4,10 @@
 
 import socket, struct 
 from str2num import *
+from sockaddr import receive
 
 BUFF_SIZE = 4096
 USER_ID = 'YuanDa'
-FILE_NAME = '128s'
 
 ################ Cloud Storage Service ################
 
@@ -48,12 +48,13 @@ def receive_and_store(user_id, user_sock):
     user_sock -- socket
     """
     # 128 bytes for file name, 4 bytes for file size
-    fileinfo_size = struct.calcsize(FILE_NAME+'I')
-    file_info = user_sock.recv(fileinfo_size)
-    file_name, file_size = struct.unpack(FILE_NAME+'I', file_info)
+    file_name = receive(user_sock, struct.calcsize(FILE_NAME))
+    file_name = struct.unpack(FILE_NAME, file_name)[0]
     new_name = name_file(user_id, file_name.strip('\00'))
-    received = 0
+    file_size = receive(user_sock, INT_SIZE)
+    file_size = str2uint(file_size)
     # receive the file
+    received = 0
     with open(new_name, 'wb') as fp:
         while(received < file_size):
             unreceived = file_size - received
@@ -63,7 +64,6 @@ def receive_and_store(user_id, user_sock):
                 buf = user_sock.recv(unreceived)
             received += len(buf)
             fp.write(buf)
-
             #print received
         # flush block_buff if not full at last tranfer
 
@@ -97,18 +97,17 @@ def response(*args):
         print 'Error while generating proofs', e
 
 def gen_proof(landmark):
-    file_name = landmark.recv(struct.calcsize(FILE_NAME))
+    """get filename, index then generate proof(index, block) to landmark"""
+    file_name = receive(landmark, struct.calcsize(FILE_NAME))
     file_name = struct.unpack(FILE_NAME, file_name)[0]
-    file_name = file_name.strip('\00')
-    file_name = name_file(USER_ID, file_name)
-    blocksize = str2uint(landmark.recv(4))
+    file_name = name_file(USER_ID, file_name.strip('\00'))
+    blocksize = str2uint(receive(landmark, INT_SIZE))
 
-    index = 0
     with open(file_name, 'rb') as fp:
         while True:
-            index_net = landmark.recv(4)
+            index_net = receive(landmark, INT_SIZE)
             index = str2uint(index_net)
-            if index == 4294967295L:
+            if index == FINISH:
                 break
             block = retrieve_block(index, blocksize, fp)
             landmark.send(index_net)

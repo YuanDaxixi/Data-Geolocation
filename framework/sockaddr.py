@@ -49,7 +49,7 @@ def query_port(service_name):
 def query_ip(host_name):
     """get a host ip by given host name
        bad name results in self's ip"""
-    ips = {'Baggins': ['101.132.155.247', '115.28.188.42', '118.24.23.117'],
+    ips = {'Baggins': ['127.0.0.1'],
            'Nazgul': ['127.0.0.1'], # modify when deploying
            'Witch_King': '127.0.0.1',
            'Sauron': '127.0.0.1'
@@ -58,3 +58,16 @@ def query_ip(host_name):
         return ips[host_name]
     else:
         return get_host_ip()
+
+def receive(sock, total, size = 1024):
+    if size > total:
+        size = total
+    received, data = 0, ""
+    while(received < total):
+        unreceived = total - received
+        if unreceived >= size:
+            data += sock.recv(size)
+        else:
+            data += sock.recv(unreceived)
+        received = len(data)
+    return data

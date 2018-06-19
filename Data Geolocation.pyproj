@@ -5,7 +5,7 @@
     <ProjectGuid>58bf78db-1a19-437c-a5b5-204bd9acb099</ProjectGuid>
     <ProjectTypeGuids>{a41c8ea1-112a-4a2d-9f91-29557995525f};{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>rtt_pdfs.py</StartupFile>
+    <StartupFile>PDP\Witch_King.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -23,54 +23,38 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Baggins.py" />
     <Compile Include="classifier.py" />
-    <Compile Include="PDP\Baggins.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\client.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\key.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\landmark.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\cloud.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\LC.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\Nazgul.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\Sauron.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\server.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\sockaddr.py" />
-    <Compile Include="PDP\str2num.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\test.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\user.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="PDP\Witch_King.py" />
+    <Compile Include="framework\client.py" />
+    <Compile Include="framework\cloud.py" />
+    <Compile Include="framework\key.py" />
+    <Compile Include="framework\landmark.py" />
+    <Compile Include="framework\LC.py" />
+    <Compile Include="framework\netools\ipip.py" />
+    <Compile Include="framework\netools\ip_database.py" />
+    <Compile Include="framework\netools\ping.py" />
+    <Compile Include="framework\netools\syn.py" />
+    <Compile Include="framework\netools\traceroute.py" />
+    <Compile Include="framework\netools\__init__.py" />
+    <Compile Include="framework\server.py" />
+    <Compile Include="framework\sockaddr.py" />
+    <Compile Include="framework\str2num.py" />
+    <Compile Include="framework\test.py" />
+    <Compile Include="framework\user.py" />
+    <Compile Include="Nazgul.py" />
     <Compile Include="rtt_pdfs.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Sauron.py" />
+    <Compile Include="Witch_King.py" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|2.7" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="PDP\" />
+    <Folder Include="framework\" />
+    <Folder Include="framework\netools\" />
+    <Folder Include="G:\programmer yuan\code\self-study\Project\Data Geolocation\framework\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

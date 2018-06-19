@@ -20,11 +20,13 @@ def set_server(ip, port, max_client, func, *arg):
         return False
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(self_addr)
         s.listen(max_client)
         print 'Waiting Connection...'
     except socket.error, e:
         print 'Socket Error', e
+        raise
 
     while(True):
         client_sock, client_ip = s.accept()
