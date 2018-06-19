@@ -5,7 +5,7 @@
     <ProjectGuid>58bf78db-1a19-437c-a5b5-204bd9acb099</ProjectGuid>
     <ProjectTypeGuids>{a41c8ea1-112a-4a2d-9f91-29557995525f};{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>PDP\Witch_King.py</StartupFile>
+    <StartupFile>Nazgul.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -25,11 +25,14 @@
   <ItemGroup>
     <Compile Include="Baggins.py" />
     <Compile Include="classifier.py" />
+    <Compile Include="core_route.py" />
     <Compile Include="framework\client.py" />
     <Compile Include="framework\cloud.py" />
     <Compile Include="framework\key.py" />
     <Compile Include="framework\landmark.py" />
     <Compile Include="framework\LC.py" />
+    <Compile Include="framework\netools\get_host_ip.py" />
+    <Compile Include="framework\netools\inet_detect.py" />
     <Compile Include="framework\netools\ipip.py" />
     <Compile Include="framework\netools\ip_database.py" />
     <Compile Include="framework\netools\ping.py" />

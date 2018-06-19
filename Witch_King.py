@@ -1,6 +1,6 @@
-from sockaddr import get_host_ip, query_port, query_ip
-from server import set_server
-from LC import locate_data
+from framework.sockaddr import get_host_ip, query_port, query_ip
+from framework.server import set_server
+from framework.LC import locate_data
 
 if __name__ == '__main__':
     self_ip = get_host_ip()

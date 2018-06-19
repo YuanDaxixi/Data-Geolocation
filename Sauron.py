@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import socket, os
-from sockaddr import query_port, query_ip
-from client import set_client
-from user import pdp_setup, request_serve
+from framework.sockaddr import query_port, query_ip
+from framework.client import set_client
+from framework.user import pdp_setup, request_serve
 
 if __name__ == '__main__':
     os.chdir('G:\\programmer yuan\\学位论文\\code\\the king of the ring'.decode('utf-8'))

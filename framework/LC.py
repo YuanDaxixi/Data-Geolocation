@@ -202,7 +202,7 @@ def connect_landmark(ip, port, *args):
     print 'Connection closed.'
 
 def transfer_data(landmark_sock, *args):
-    """ LC transfer data to landmark, data including:
+    """ LC transfers data to landmark, data includs:
     file_name -- name of the file to be located
     key_len -- length of the cipher key
     key -- the key used to generate tags
@@ -227,8 +227,7 @@ def transfer_data(landmark_sock, *args):
         landmark_sock.send(tag)
 
 def wait_latency(ip, landmark_sock):
-    """ LC waits for landmark replying latency, frequency, hop, city,
-    then save it.
+    """ LC waits for landmark replying latency, frequency, hop, city
     ip -- ip address of the landmark
     landmark_sock -- socket
     """

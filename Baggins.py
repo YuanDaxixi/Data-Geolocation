@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from sockaddr import get_host_ip, query_port, query_ip
-from server import set_server
-from cloud import serve_user, response
+from framework.sockaddr import get_host_ip, query_port, query_ip
+from framework.server import set_server
+from framework.cloud import serve_user, response
 
 MAX_ENEMY = 10
 

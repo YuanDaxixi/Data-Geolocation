@@ -97,11 +97,10 @@ def pack_index_tag(size, count, index_size = 4):
     index_tag = index_tag_list
 
 def reply_lc(geoinfo, lc_sock):
-    """ landmark transfer the latency, frequency, hop, city to LC """
+    """ landmark transfers the latency, frequency, hop, city to LC """
     latency, frequency, hop, city = geoinfo[:]
-    latency = double2str(latency)
-    frequency = uint2str(frequency)
-    hop = uint2str(hop)
+    frequency = socket.htonl(frequency)
+    hop = socket.htonl(hop)
     lc_sock.send(struct.pack(GEOINFO, latency, frequency, hop, city))
 ################ Transmission between LC and Landmarks END ################
 
@@ -138,15 +137,16 @@ def geotrace(cloud_ip, path = u'./resources/route/'):
         path += my_city + u'.route'
     t = traceroute.Tracert()
     trace_info = t.traceroute(cloud_ip).reverse()
-    route_table = RouteTable(path, my_city)
-    route_table.load(path)
-    for hop, trace in enumerate(trace_info):
-        ip = trace[2]
-        weights = route_table.weight(ip)
-        if weights:
-            result = list(max(weights, key = lambda x: x[1]))
-            result.reverse()
-            return result.insert(1, hop)
+    if trace_info:
+        route_table = RouteTable(path, my_city)
+        route_table.load(path)
+        for hop, trace in enumerate(trace_info):
+            ip = trace[2]
+            weights = route_table.weight(ip)
+            if weights:
+                result = list(max(weights, key = lambda x: x[1]))
+                result.reverse()
+                return result.insert(1, hop)
     return [0, 0, NONE]
 
 def measure_latency(blocksize, times, cloud_sock):
@@ -167,9 +167,9 @@ def measure_latency(blocksize, times, cloud_sock):
     total = times * buf_size
     received, i = 0, 0 
     if os.name == 'nt': # time.clock() on win32, time.time() on linux
-        getime = time.clock()
+        getime = time.clock
     else:
-        getime = time.time()
+        getime = time.time
     getime()
     while(received < total):
         # once a whole block received, it restart the timer
