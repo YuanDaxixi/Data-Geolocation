@@ -11,6 +11,8 @@ INT = 'I'
 INT_SIZE = struct.calcsize(INT)
 DOUBLE_SIZE = struct.calcsize(DOUBLE)
 FINISH = 4294967295
+QUESTION = 'So, where is it?'
+ANSWER = 'Faker!'.encode('utf-8')
 
 def str2uint(str):
     return socket.ntohl(struct.unpack('I', str)[0])

@@ -2,13 +2,16 @@
 # LC module
 # created by YuanDa 2017-11
 
-import socket, struct, threading
+import socket, struct, threading, math
 from client import set_client
 from Crypto.Random import random
 from str2num import *
 from sockaddr import receive
+from rtt_pdfs import Rtt_Pdfs
 
-geo_info = {} # record latency that each landmark gets, key is landmark's ip, value is latency
+# record latency that each landmark gets, key is landmark's ip,
+# value is [latency, frequency, hop, city]
+geo_info = {}
 tags = [] # record tags received from user
 
 ################ Data Geolocation Service ################
@@ -41,7 +44,7 @@ def locate_data(*args):
     except socket.error, e:
         print 'Error while geolocating', e
     try:
-        result = calculate_location(landmarks)
+        result = classifier(landmarks)
     except FloatingPointError, e:
         print 'Error while calculating location', e
     try:
@@ -100,26 +103,53 @@ def arrange_landmarks(landmarks, *metadata):
     for t in threads:
         t.join()
 
-def calculate_location(landmarks):
-    """ given geo_info, calculate the location of the data
+def classifier(landmarks):
+    """ given geo_info, calculate the location of the data, return
+        the city name.
     landmarks -- list of (ip, port) of each landmarks
     """
     global geo_info
-    ips = [x[0] for x in landmarks]
-    for ip in ips:
-        if geo_info[ip][0] > 0:
-            pass # geolocation process
+    result = {}
+    alives = load_landmarks()
+    pri_freq = gen_pri_freq(geo_info)
+    pdfs = Rtt_Pdfs(None, './resources/')
+    pdfs.load('./resources/pdfs.pickle')
+    candidates = pdfs.pdfs.index
+    for candidate in candidates:
+        temp = sum([pdfs.cnd_prob_log(alives[ip], candidate, geo_info[ip][0]) for ip, port in landmarks])
+        if candidate in pri_freq.keys():
+            pri_freq_log = math.log(pri_freq[candidate] + math.e)
         else:
-            print 'Failure'
-    return "Xi'an"
+            pri_freq_log = 0
+        result[candidate] = temp + pri_freq_log
+    return max(result, key = lambda k: result[k])
+
+def gen_pri_freq(geo_info):
+    """calculate priori probability(frequency)"""
+    pri_freq = {}
+    for ip, value in geo_info.items():
+        latency, frequency, hop, city = value[:]
+        if city in pri_freq.keys():
+            pri_freq[city] += frequency
+        else:
+            pri_freq[city] = frequency
+    return pri_freq
+
+def load_landmarks(fn = './resources/servers.txt'):
+    """read the servers(landmarks) configuration files, return servers alive"""
+    with open(fn, 'r') as fp:
+        lines = fp.readlines()
+    # line[0] is ip, line[1] is city name, line[-1] is status
+    lines = [line.split() for line in lines]
+    return {line[0]: line[1].decode('utf-8') for line in lines if line[-1] == '1'}
 
 def reply_user(user_sock, result):
     """ send the result to user """
     say_goodbye = user_sock.recv(128)
-    if say_goodbye == 'So, where is it?':
-        user_sock.send(result)
+    if say_goodbye == QUESTION:
+        user_sock.send(struct.pack(FILE_NAME, result.encode('utf-8')))
     else:
-        user_sock.send('Faker!')
+        user_sock.send(ANSWER)
     print 'Connection %s closed' % user_sock.getsockname()[0]
 
 def pack_args(landmark, nonce_list, metadata):
@@ -236,7 +266,7 @@ def wait_latency(ip, landmark_sock):
     format = GEOINFO
     temp = receive(landmark_sock, struct.calcsize(format))
     latency, frequency, hop, city = struct.unpack(format, temp)
-    geo_info[ip] = (latency, socket.ntohl(frequency), socket.ntohl(hop), city.strip('\00'))
-    print latency, frequency, hop, city
+    geo_info[ip] = (latency, socket.ntohl(frequency), socket.ntohl(hop), city.strip('\00').decode('utf-8'))
+    print geo_info[ip]
 
 ################ Transmission between LC and Landmarks END ################

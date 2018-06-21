@@ -101,7 +101,7 @@ def reply_lc(geoinfo, lc_sock):
     latency, frequency, hop, city = geoinfo[:]
     frequency = socket.htonl(frequency)
     hop = socket.htonl(hop)
-    lc_sock.send(struct.pack(GEOINFO, latency, frequency, hop, city))
+    lc_sock.send(struct.pack(GEOINFO, latency, frequency, hop, city.encode('utf-8')))
 ################ Transmission between LC and Landmarks END ################
 
 ################ Challenge-Response ################
@@ -136,17 +136,19 @@ def geotrace(cloud_ip, path = u'./resources/route/'):
         my_city = fp.readline().split()[-1].decode('utf-8')
         path += my_city + u'.route'
     t = traceroute.Tracert()
-    trace_info = t.traceroute(cloud_ip).reverse()
+    trace_info = t.traceroute(cloud_ip)
+    trace_info.reverse()
     if trace_info:
         route_table = RouteTable(path, my_city)
         route_table.load(path)
         for hop, trace in enumerate(trace_info):
-            ip = trace[2]
+            ip = trace[1]
             weights = route_table.weight(ip)
             if weights:
                 result = list(max(weights, key = lambda x: x[1]))
+                result.insert(1, hop)
                 result.reverse()
-                return result.insert(1, hop)
+                return result
     return [0, 0, NONE]
 
 def measure_latency(blocksize, times, cloud_sock):

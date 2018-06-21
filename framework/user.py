@@ -8,6 +8,7 @@ from Crypto.Hash import SHA256
 from Crypto.Random import random
 from key import gen_key, get_tag_key, store_key, retrieve_key
 from str2num import *
+from sockaddr import receive
 
 BLOCKSIZE = 4096
 TAG_LEN = SHA256.digest_size * 8
@@ -36,18 +37,16 @@ def pdp_setup(*args):
         print 'Error while generating metadata:', e
     # send the file expected to store on the cloud
     try:
-        sendto_cloud(file_name, block_size, server_sock)
+        cloud_storage(file_name, block_size, server_sock)
     except IOError, e:
         print 'Error while sending data to cloud:', e
     # wait for the cloud's respond
     wait_ack(server_sock)
 
-def sendto_cloud(file_name, blocksize, server_sock):
-    """send 'file_name', file size and file named 'file_name' to the cloud(server_sock)
-       128 bytes, 4 bytes for file name, file size
-       blocksize bytes for block each time
-    argument is same as above
-    block_count -- global variable
+def cloud_storage(file_name, blocksize, server_sock):
+    """send <file_name>, <file size> and the whole file to the cloud(server_sock);
+       128 bytes for file name, 4 bytes for <file size>, <file size> bytes for blocks 
+       in total; argument is same as above.
     """
     with open(file_name, 'rb') as fp:
         # send blocksize first and the number of blocks second
@@ -76,8 +75,8 @@ def wait_ack(server_sock):
         print 'Get Wrong React From Cloud'
 
 def gen_metadata(file_name, blocksize = BLOCKSIZE, mode = 0, key_file = KEY_FILE):
-    """divide file named 'file_name' into blocks, then calculate tags and
-       save tags in a new file named 'output_name'"""
+    """divide file named <file_name> into blocks, then calculate tags and
+       save tags in a new file named <file_name>.tag"""
     output_name = file_name + '.tag'
     key = gen_key(KEY_LEN)
     tag_key = get_tag_key(key)
@@ -89,8 +88,8 @@ def gen_metadata(file_name, blocksize = BLOCKSIZE, mode = 0, key_file = KEY_FILE
     store_key(key, key_file)
 
 def gen_file_tag(file_name, blocksize, key, hash_func = SHA256):
-    """generate the tag(list) for each block of file named 'file_name'
-    'key' is the key used for tag generating"""
+    """generate the tag(list) for each block of file named <file_name>
+    <key> is the key used for generating tag"""
     global block_count 
     tag_list = []
     with open(file_name, 'rb') as fp:
@@ -103,7 +102,7 @@ def gen_file_tag(file_name, blocksize, key, hash_func = SHA256):
     return tag_list
 
 def store_file_tag(tag_list, output_name, blocksize):
-    """store block size, tag length and all tags in file named 'output_name'
+    """store <blocksize>, tag length and tags in <tag_list>,
     output file structure: blocksize-TAG_LEN-tag1-tag2-...-tagn
     tag_list -- all tags in list
     """
@@ -114,7 +113,7 @@ def store_file_tag(tag_list, output_name, blocksize):
             fp.write(tag)
 
 def gen_tag(block, key, hash_func = SHA256):
-    """generate a tag for 'block' with 'key', return the tag in bytes
+    """generate a tag for <block> with <key>, return the tag in bytes
     key -- cryptografic key
     hash_func -- hash algorithm
     """
@@ -127,7 +126,7 @@ def gen_tag(block, key, hash_func = SHA256):
 ################ Request Service ################
 
 def request_serve(*args):
-    """ request LC geolocation user's data, and wait for the result
+    """ request LC to geolocate user's data, and wait for the result
         invoked by user<->LC client
     file_name -- the name of file to be located 
     cloud_ip -- cloud ip address
@@ -151,16 +150,16 @@ def request_serve(*args):
     try:
         send_tags(tag_size, tag_list, server_sock)
     except socket.error, e:
-        print 'Error while send tags', e
+        print 'Error while sending tags', e
     try:
         wait_good_news(server_sock)
     except socket.error, e:
         print 'Oh! Worst News.\n', e
 
 def send_info(file_name, key, blocksize, cloud_ip, server_sock):
-    """ send the file name and key which generate tags to LC; 
-        128 bytes for file name, 4 bytes for key-length, 32 bytes for key
-        4 bytes for blocksize, and 4 bytes for cloud ip address
+    """ send <file_name> and <key> used to verify proofs to LC; 
+        128 bytes for <file name>, 4 bytes for key-length, 32 bytes for <key>
+        4 bytes for <blocksize>, and 4 bytes for <cloud_ip>
     file_name -- name of the file
     key -- the key mentioned above
     server_sock -- socket
@@ -176,7 +175,7 @@ def send_info(file_name, key, blocksize, cloud_ip, server_sock):
 
 def read_tags(tag_file):
     """ read blocksize, tag_size, and tags from disk, and return them
-    tag_file -- name of the file storing datas mentioned above
+    tag_file -- name of the file storing datas mentioned in above line
     """
     tag_list = []
     with open(tag_file, 'rb') as fp:
@@ -190,10 +189,10 @@ def read_tags(tag_file):
     return (blocksize, tag_size, tag_list)
 
 def send_tags(tag_size, tag_list, server_sock):
-    """ send blocksize, tag_size and tags to LC
+    """ send blocksize, <tag_size> and tags to LC,
         4 bytes, 4 bytes for tag_size, tag_count and
-        tag_size bytes for tag each time(tag_count times)
-    arguments is the same as functions' above
+        <tag_size> bytes for tag each time
+    arguments is the same as above functions'
     """
     tag_count = len(tag_list)
     server_sock.send(uint2str(tag_size))
@@ -206,8 +205,10 @@ def wait_good_news(server_sock):
     server_sock -- socket
     """
     server_sock.send('So, where is it?')
-    good_news = server_sock.recv(BUFF_SIZE)
-    print good_news
+    good_news = receive(server_sock, struct.calcsize(FILE_NAME))
+    result = struct.unpack(FILE_NAME, good_news)[0]
+    result = result.decode('utf-8')
+    print result
     server_sock.close()
 
 ################ Request Service END ################

@@ -36,7 +36,3 @@ class Inet_Detect(Ping, Tracert):
             self.syn_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, self.SYN_SCAN)
         except socket.error, e:
             print 'socket error:', e
-
-
-
-    

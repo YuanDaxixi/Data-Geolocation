@@ -2,7 +2,7 @@
 # rtt probability density function database
 # created by YuanDa 2017-11
 
-import pandas
+import os, pandas
 import numpy as np
 import matplotlib.pyplot as plt
 from pandas import DataFrame
@@ -20,8 +20,9 @@ class Rtt_Pdfs():
     def _extract_city(self):
         """extract city name from file name"""
         self.cities = []
-        for file in self.files:
-            self.cities.append(file.split('.')[0])
+        if self.files:
+            for file in self.files:
+                self.cities.append(file.split('.')[0])
 
     def run(self):
         """create a big 2-d table of probability distribution function of
@@ -51,12 +52,13 @@ class Rtt_Pdfs():
         else:
             return None
 
-    def pri_prob_log(self, src, dst, rtt):
+    def cnd_prob_log(self, src, dst, rtt):
         """return In( P(rtt|dst)) of src, None if not exists"""
         kde = self.pdf(src, dst)
         if kde == None:
             return None
-        return kde.score_samples(rtt)
+        ret = float(kde.score_samples(rtt)[0])
+        return ret
 
     def plot_pdf(self, src, dst):
         """draw the pdf picture of src-dst's rtt"""
@@ -102,14 +104,15 @@ class Rtt_Pdfs():
         print 'read from', fn
 
 if __name__ == '__main__':
-    files = [u'西安.rtt.txt']
-    pdfs = Rtt_Pdfs(files)
+    for path, dirs, files in os.walk('./resources/rtt/'): # files is gb2312 on win
+        fns = [file.decode('gb2312') for file in files]
+    pdfs = Rtt_Pdfs(fns)
     pdfs.run()
-    print pdfs.pri_prob_log(u'西安', u'武汉', 50)
-    print pdfs.pri_prob_log(u'西安', u'西安', 50)
+    print pdfs.cnd_prob_log(u'西安', u'武汉', 50)
+    print pdfs.cnd_prob_log(u'西安', u'西安', 50)
     pdfs.plot_pdf(u'西安', u'拉萨')
     #pdfs.store()
     #pdfs.load()
-    #print pdfs.pri_prob_log(u'西安', '220.162.197.2', 50)
-    #print pdfs.pri_prob_log(u'西安', '220.162.197.555', 50)
+    #print pdfs.cnd_prob_log(u'西安', '220.162.197.2', 50)
+    #print pdfs.cnd_prob_log(u'西安', '220.162.197.555', 50)
     #pdfs.plot_pdf(u'西安', '220.162.197.2')
