@@ -35,8 +35,7 @@ def get_host_ip():
     return ip
 
 def query_port(service_name):
-    """get service port by service name
-       bad name results in -1"""
+    """get service port by service name bad name results in -1"""
     ports = {'krs': 7777, # keep rings service provided by Baggins
              'drs': 7778, # destroy rings service provided by Baggins
              'frs': 8888, # find rings service provided by Witch-King
@@ -46,17 +45,54 @@ def query_port(service_name):
     else:
         return -1
 
+def load_landmarks(fn = './resources/servers.txt'):
+    """read the servers(landmarks) configuration files, return servers alive"""
+    with open(fn, 'r') as fp:
+        lines = fp.readlines()
+    # line[0] is ip, line[1] is city name, line[-1] is status
+    lines = [line.split() for line in lines]
+    dic =  {line[0]: line[1].decode('utf-8') for line in lines if line[-1] == '1'}
+    if '127.0.0.1' in dic.keys():
+        self_ip = get_host_ip()
+        dic[self_ip] = dic['127.0.0.1']
+    return dic
+
+def online_landmarks(fn = './resources/servers.txt'):
+    """connect each landmark, if succeed, mark it 1, else 0 in <fn>"""
+    with open(fn, 'r+') as fp:
+        # line[0] is ip, line[1] is city name, line[-1] is status
+        lines = [line.split() for line in fp.readlines()]
+        dic = {line[0]: line[1] for line in lines}
+        #s.settimeout(1)
+        fp.seek(0)
+        landmarks = []
+        for ip in dic.keys():
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.5)
+            try:
+                if ip == '127.0.0.1':
+                    landmark = get_host_ip()
+                else:
+                    landmark = ip
+                s.connect((landmark, query_port('grs')))
+                status = '1'
+                landmarks.append(landmark)
+            except socket.error:
+                status = '0'
+            finally:
+                s.close()
+                fp.write(ip + ' ' + dic[ip] + ' ' + status + '\n')
+        return landmarks
+
 def query_ip(host_name):
     """get a host ip by given host name
        bad name results in self's ip"""
-    ips = {'Baggins': ['127.0.0.1'],
-           'Nazgul': ['127.0.0.1'], # modify when deploying
-           'Witch_King': '127.0.0.1',
-           'Sauron': '127.0.0.1'
-          }
-    if host_name in ips.keys():
-        return ips[host_name]
-    else:
+
+    if host_name == 'Baggins':
+        return [get_host_ip()]
+    elif host_name == 'Nazgul':
+        return online_landmarks()
+    else: # Witch_King, Sauron
         return get_host_ip()
 
 def receive(sock, total, size = 1024):
@@ -71,3 +107,6 @@ def receive(sock, total, size = 1024):
             data += sock.recv(unreceived)
         received = len(data)
     return data
+
+if __name__ == '__main__':
+    print query_ip('Nazgul')

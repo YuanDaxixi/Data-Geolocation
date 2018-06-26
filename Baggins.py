@@ -8,7 +8,6 @@ MAX_ENEMY = 10
 
 if __name__ == '__main__':
     self_ip = get_host_ip()
-    self_ip = '127.0.0.1' # to be deleted
     import os
     os.chdir('G:\\programmer yuan\\学位论文\\code\\the king of the ring'.decode('utf-8'))
     krs = query_port('krs')

@@ -3,7 +3,7 @@
 # functions only used before transfer data on network(socket)
 import socket, struct
 
-NONE = 'none'
+NONE = u'none'
 GEOINFO = 'dII128s'
 FILE_NAME = '128s'
 DOUBLE = 'd'

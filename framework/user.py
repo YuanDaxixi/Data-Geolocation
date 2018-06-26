@@ -154,7 +154,7 @@ def request_serve(*args):
     try:
         wait_good_news(server_sock)
     except socket.error, e:
-        print 'Oh! Worst News.\n', e
+        print 'Oh! Connection Lost!\n', e
 
 def send_info(file_name, key, blocksize, cloud_ip, server_sock):
     """ send <file_name> and <key> used to verify proofs to LC; 

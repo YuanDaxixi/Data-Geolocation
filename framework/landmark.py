@@ -55,7 +55,7 @@ def receive_metadata(lc_sock):
     return these metadata in tuple
     lc_sock -- socket
     """
-    file_name = lc_sock.recv(struct.calcsize(FILE_NAME))
+    file_name = receive(lc_sock, struct.calcsize(FILE_NAME))
     file_name = struct.unpack(FILE_NAME, file_name)[0]
     file_name = file_name.strip('\00')
     key_len = str2uint(receive(lc_sock, INT_SIZE))
