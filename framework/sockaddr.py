@@ -87,9 +87,8 @@ def online_landmarks(fn = './resources/servers.txt'):
 def query_ip(host_name):
     """get a host ip by given host name
        bad name results in self's ip"""
-
     if host_name == 'Baggins':
-        return [get_host_ip()]
+        return ['115.28.188.42'] # modify according to need
     elif host_name == 'Nazgul':
         return online_landmarks()
     else: # Witch_King, Sauron

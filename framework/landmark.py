@@ -128,10 +128,14 @@ def challenge(cloud_ip, cloud_port, *metadata):
     passed = verify_proof(blocksize, key)
     latency = handle_latency(passed, cloud_ip)
     cloud_sock.close()
-    print 'Connection closed.'
+    print 'Connection to cloud closed.'
     return latency
 
 def geotrace(cloud_ip, path = u'./resources/route/'):
+    """landmark traceroutes the cloud and get the routes' ip, then
+    look up these ip in route table, take the ip nearest to cloud,
+    return[weight, hop, city] the largest weight city the ip binds to,
+    but if none found in route table, return [0, 0, NONE]"""
     with open('.config', 'r') as fp:
         my_city = fp.readline().split()[-1].decode('utf-8')
         path += my_city + u'.route'

@@ -29,6 +29,7 @@ def locate_data(*args):
     """
     
     landmarks, user_sock = args
+    print 'active landmarks: ', landmarks
     try:
         metadata = receive_metadata(user_sock)
     except socket.error, e:
@@ -261,13 +262,19 @@ def wait_latency(ip, landmark_sock, error = 0):
     """
     global geo_info
     geo_info = {}
-    if error == 0:
-        format = GEOINFO
-        temp = receive(landmark_sock, struct.calcsize(format))
-        latency, frequency, hop, city = struct.unpack(format, temp)
-        geo_info[ip] = (latency, socket.ntohl(frequency), socket.ntohl(hop), city.strip('\00').decode('utf-8'))
-    else:
+    format = GEOINFO
+    if error == 1:
         geo_info[ip] = (-1, 0, 0, NONE)
+    else:
+        try:
+            temp = receive(landmark_sock, struct.calcsize(format))
+        except socket.error, e:
+            print '%s is a bad server.' % ip
+            geo_info[ip] = (-1, 0, 0, NONE)
+        else:
+            latency, frequency, hop, city = struct.unpack(format, temp)
+            geo_info[ip] = (latency, socket.ntohl(frequency), socket.ntohl(hop), \
+                            city.strip('\00').decode('utf-8'))
     print geo_info[ip], 'returned from', ip
 
 ################ Transmission between LC and Landmarks END ################

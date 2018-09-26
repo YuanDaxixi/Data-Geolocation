@@ -7,7 +7,7 @@ sys.setdefaultencoding("utf-8")
 from ipip import IP
 
 #path = u'G:\\programmer yuan\\学位论文\\data\\17monipdb\\'
-IP.load(os.path.abspath("17monipdb.dat"))
+IP.load(os.path.abspath("./resources/17monipdb.dat"))
 #path = path + u'电信' + os.sep
 #dirs = [path + name + os.sep + 'ip.txt' for name in os.listdir(path)]
 

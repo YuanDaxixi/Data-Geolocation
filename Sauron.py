@@ -6,7 +6,7 @@ from framework.client import set_client
 from framework.user import pdp_setup, request_serve
 
 if __name__ == '__main__':
-    print os.getcwd()
+    #print os.getcwd()
     os.chdir('G:\\programmer yuan\\学位论文\\code\\the king of the ring'.decode('utf-8'))
     shire = query_ip('Baggins') # the bravest hobbits living shire
     Witch_King = (query_ip('Witch_King'), query_port('frs')) # witch-King of Angmar, the lead of Nazgul, the most powerful servant of Sauron
