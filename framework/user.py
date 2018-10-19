@@ -44,12 +44,11 @@ def pdp_setup(*args):
     wait_ack(server_sock)
 
 def cloud_storage(file_name, blocksize, server_sock):
-    """send <file_name>, <file size> and the whole file to the cloud(server_sock);
-       128 bytes for file name, 4 bytes for <file size>, <file size> bytes for blocks 
+    """send <file_name>, <file_size> and the whole file to the cloud(server_sock);
+       128 bytes for file name, 4 bytes for <file_size>, <file_size> bytes for blocks 
        in total; argument is same as above.
     """
     with open(file_name, 'rb') as fp:
-        # send blocksize first and the number of blocks second
         file_info = struct.pack(FILE_NAME, file_name)
         file_size = uint2str(os.stat(file_name).st_size)
         server_sock.send(file_info)

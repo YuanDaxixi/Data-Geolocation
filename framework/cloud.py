@@ -65,7 +65,6 @@ def receive_and_store(user_id, user_sock):
             received += len(buf)
             fp.write(buf)
             #print received
-        # flush block_buff if not full at last tranfer
 
 def name_file(user_id, file_name):
     """ give a good name to the file """

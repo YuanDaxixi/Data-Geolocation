@@ -7,7 +7,7 @@ from client import set_client
 from Crypto.Random import random
 from str2num import *
 from sockaddr import receive, load_landmarks
-from rtt_pdfs import Rtt_Pdfs
+from training import Training
 
 # record latency that each landmark gets, key is landmark's ip,
 # value is [latency, frequency, hop, city]
@@ -45,7 +45,7 @@ def locate_data(*args):
     except socket.error, e:
         print 'Error while geolocating', e
     try:
-        pdfs = Rtt_Pdfs(None, './resources/')
+        pdfs = Training(None, './resources/')
         pdfs.load('./resources/pdfs.pickle')
         result = classifier(landmarks, pdfs)
     except FloatingPointError, e:
