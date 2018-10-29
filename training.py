@@ -31,20 +31,19 @@ class Training():
         with open(self.path + filename, 'wb') as fp:
             cPickle.dump(obj, fp)
 
-    def data_set(self, filename = 'Rtts.rtt'):
-        """generates train data and test data from object in <filename>"""
+    def gen_test(self, filename = 'Rtts.rtt'):
+        """generates train data from object in <filename>"""
         rtt_map = self._read(filename)
-        train_rtt, test_rtt = {}, {}
+        train_rtt= {}
         src_cities = rtt_map.keys()
         for src_city in src_cities:
-            train_rtt[src_city], test_rtt[src_city] = {}, {}
+            train_rtt[src_city]= {}
             for dst_city, rtts in rtt_map[src_city].items():
                 dst_city, rtts = dst_city.decode('utf-8'), [float(rtt) for rtt in rtts]
                 rtts.sort()
-                train_rtt[src_city][dst_city] = rtts[0::2]
-                test_rtt[src_city][dst_city] = rtts[1::2]
+                train_rtt[src_city][dst_city] = rtts[0::2]                
         self._write(train_rtt, 'train.rtt')
-        self._write(test_rtt, 'test.rtt')
+
 
     def train(self, train_file):
         """create probability distribution function of Rtts of 
@@ -123,7 +122,7 @@ class Training():
 
 if __name__ == '__main__':
     pdfs = Training()
-    #pdfs.data_set()
+    #pdfs.gen_test()
     #pdfs.train('train.rtt')
     #pdfs.store()
     pdfs.load()

@@ -45,8 +45,8 @@ def locate_data(*args):
     except socket.error, e:
         print 'Error while geolocating', e
     try:
-        pdfs = Training(None, './resources/')
-        pdfs.load('./resources/pdfs.pickle')
+        pdfs = Training('./resources/')
+        pdfs.load('pdfs.pickle')
         result = classifier(landmarks, pdfs)
     except FloatingPointError, e:
         print 'Error while calculating location', e

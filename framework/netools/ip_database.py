@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys, socket, struct, os, pickle
+import sys, socket, struct, os, cPickle
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
@@ -30,7 +30,7 @@ def query_test(fn):
 
 def text2binary(fn = 'trust ip.txt'):
     """convert ip-city from text to binary(dictionary) stored on disk"""
-    output_name = 'ip2city.pickle'
+    output_name = 'ip2city.cPickle'
     try:    
         fp = open(fn, 'r')
     except IOError, e:
@@ -42,17 +42,17 @@ def text2binary(fn = 'trust ip.txt'):
     for line in lines:
         dic[line[0]] = line[-1]
     with open(output_name, 'wb') as fp:
-        pickle.dump(dic, fp)
+        cPickle.dump(dic, fp)
         print output_name, 'generated.'
 
-def load_ip2city(fn = 'ip2city.pickle'):
+def load_ip2city(fn = 'ip2city.cPickle'):
     """load ip-city dictionary, and return it"""
     try:    
         fp = open(fn, 'rb')
     except IOError, e:
         text2binary()
         raise
-    dic = pickle.load(fp)
+    dic = cPickle.load(fp)
     fp.close()
     return dic
 

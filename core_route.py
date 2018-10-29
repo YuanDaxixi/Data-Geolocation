@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import socket, pickle
+import socket, cPickle
 from framework.netools.inet_detect import ip2int, int2ip, class_a, class_b, class_c
 
 
@@ -61,17 +61,20 @@ class RouteTable():
                 else:
                     self.table[ip] = {city: 1}
 
-    def store(self, fn = 'route_table.pickle'):
+    def store(self, fn = 'route_table.cPickle'):
         """store route table in binary on disk"""
         with open(fn, 'wb') as fp:
-            pickle.dump(self.table, fp)
+            cPickle.dump(self.table, fp)
         print 'The route table has been stored in file:', fn
 
-    def load(self, fn = 'route_table.pickle'):
+    def load(self, fn = 'route_table.cPickle'):
         """load route table in binary from disk"""
-        with open(fn, 'rb') as fp:
-            self.table = pickle.load(fp)
-            print 'Reading completed.'
+        try:
+           fp = open(fn, 'rb')
+           self.table = cPickle.load(fp)
+           print 'Reading completed.'
+        except IOError, e:
+            self.table = {}
 
     def visual_store(self, fn = 'route table.txt'):
         """store route table in text on disk"""
@@ -102,7 +105,7 @@ if __name__ == '__main__':
            u'广州', u'苏州', u'沈阳']
     begins = [8, 9, 11, 11, 11, 11, 10, 10, 11, 7]
     for i, city in enumerate(lst):
-        rt = RouteTable('trace\\' + city + '.txt', city, begins[i])
+        rt = RouteTable('route\\' + city + '.txt', city, begins[i])
         rt.build()
         rt.store(city + '.route')
         rt.visual_store(city + 'route' + '.txt')
