@@ -8,7 +8,7 @@ from framework.netools.inet_detect import ip2int
 from collections import defaultdict
 
 class Simulation():
-    """"""
+    """An offline geolocation simulation, all data is real, not imitated"""
     MAX_TEST = 60
     MAX_HOP = 2
 
@@ -59,7 +59,7 @@ class Simulation():
         while hop + bias < self.MAX_HOP + bias:
             router_ip = trace[hop]
             hop += 1
-            if rft[ecs]._check_ip(ip2int(router_ip)):
+            if router_ip == '0.0.0.0' or rft[ecs]._check_ip(ip2int(router_ip)):
             #{city: (hop, weight)}
                 weights = {item[0]: (hop - bias, item[1]) for item in rft[ecs].weight(router_ip)}
                 for city, value in weights.items():
@@ -108,6 +108,7 @@ class Simulation():
                               for landmark in landmarks])
                 result[city] = union_prob
         best_candidate = max(result, key = result.get)
+
         return best_candidate
 
     def padding(self, test_rtt):
@@ -120,7 +121,8 @@ class Simulation():
                         rtts.append(avr)
 
     def locate(self, rtt_path, route_path):
-        """"""
+        """It loads all the data needed first, then geolocates the test data, 
+        return the geolocation results."""
         ecs_list = self.select_ecs(0xffff)
         test_rtt = self.read_test_data('test.rtt', rtt_path)
         test_route = self.read_test_data('test.route', route_path)
@@ -134,13 +136,11 @@ class Simulation():
         avr_city_rate = {}.fromkeys(target_cities, 0)
         num_ip_of_city = {}.fromkeys(target_cities, 0)
         suc_rate = defaultdict(int)
-        good, bad = 0, 0
+        failure_geo = defaultdict(list)
         for ip in test_rtt.iterkeys():
             valid_ecs = [ecs for ecs in ecs_list if test_rtt[ip][ecs] != []]
             # if the ip just response to 3 less landmarks, ignore it.
             if len(valid_ecs) < 3:
-                bad += 1
-                print 'Bad IP:', ip
                 continue
             real_city = ip2city[ip].decode('utf-8')               
             num_ip_of_city[real_city] += 1 # total number of valid ip to real_city
@@ -153,28 +153,48 @@ class Simulation():
                 estimated_city = self.classifier(valid_ecs, pdfs, geo_info)
                 if estimated_city == real_city:
                     suc_rate[ip] += 1.0
+                else:
+                    failure_geo[ip] += [estimated_city]
             suc_rate[ip] /= self.MAX_TEST
             avr_city_rate[real_city] += suc_rate[ip] #average succeed rate for each city!
-            good += 1
 
         for city in avr_city_rate.keys():
             avr_city_rate[city] /= num_ip_of_city[city]
-        print 'good:', good
-        print 'bad :', bad
-        return (avr_city_rate, suc_rate)
+        bad_ips = set(test_rtt.keys()).difference(set(suc_rate.keys()))
+        for ip in failure_geo.keys():
+            failure_geo[ip] = [ip2city[ip], str(len(failure_geo[ip]))] + failure_geo[ip]
+            
+        return (avr_city_rate, suc_rate, bad_ips, failure_geo)
+
+
+    def reports(self, number, path = './reports/', *args):
+        avr_city_rate, suc_rate, bad_ips, failure_geo = args[0]
+        filenames = ['city_rate', 'ip_rate', 'failure_ips', 'failure_geo']
+        filenames = [path + fn + str(number) + '.txt' for fn in filenames]
+
+        with open(filenames[0], 'w') as fp:
+            for city in avr_city_rate.keys():
+                succeed_rate = avr_city_rate[city]
+                print city, succeed_rate
+                output = '\t'.join([city.encode('utf-8'), str(succeed_rate)]) + '\n'
+                fp.write(output)
+
+        with open(filenames[1], 'w') as fp:
+            for ip, rate in suc_rate.items():
+                output = '\t'.join([ip, str(rate)]) + '\n'
+                fp.write(output)
+
+        with open(filenames[2], 'w') as fp:
+            for ip in bad_ips:
+                fp.write(ip + '\n')
+
+        with open(filenames[3], 'w') as fp:
+            for ip, value in failure_geo.items():
+                output = '\t'.join([ip] + value) + '\n'
+                fp.write(output)
 
 if __name__ == '__main__':
     simulate = Simulation()
-    avr_city_rate, suc_rate = simulate.locate('./resources/', './resources/route/')
-    fp = open('city_rate.txt', 'w')
-    for city in avr_city_rate.keys():
-        succeed_rate = avr_city_rate[city]
-        print city, succeed_rate
-        output = '\t'.join([city.encode('utf-8'), str(succeed_rate)]) + '\n'
-        fp.write(output)
-    fp.close()
-    fp = open('ip_rate.txt', 'w')
-    for ip, rate in suc_rate.items():
-        output = '\t'.join([ip, str(rate)]) + '\n'
-        fp.write(output)
-    fp.close()
+    results = simulate.locate('./resources/', './resources/route/')
+    simulate.reports(1, './reports/', results)
+    print 'Simulation Completed.'

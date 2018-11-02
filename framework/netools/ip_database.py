@@ -29,7 +29,8 @@ def query_test(fn):
             fp.close()
 
 def text2binary(fn = 'trust ip.txt'):
-    """convert ip-city from text to binary(dictionary) stored on disk"""
+    """convert ip-city from text to binary(dictionary) stored on disk.
+    Note this function doesn't change the encoding of content in orignal file."""
     output_name = 'ip2city.cPickle'
     try:    
         fp = open(fn, 'r')
