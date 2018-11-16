@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import math, cPickle
+import math, cPickle, random
+import pandas as pd
 from training import Training
 from core_route import RouteTable
 from framework.netools.ip_database import load_ip2city
@@ -47,6 +48,9 @@ class Simulation():
             rft[city] = route_table
         return rft
 
+    def _read_pop(self, path, filename):
+        self.pop_df = pd.read_csv(path + filename, index_col = 0, encoding = 'utf-8')
+        self.total_pop = sum(float(pop) for pop in self.pop_df['pop'])
 
     def gen_geo_info(self, ecs, latency, trace, rft):
         """generate geolocation information--[latency, {city: (hop, weight)} ]"""
@@ -72,10 +76,12 @@ class Simulation():
         geo_info.append(result)
         return geo_info
 
-    def pp_prob_log(self, city):
-        return 0
+    def _pp_prob_log(self, city):
+        pop = self.pop_df['pop'][city] # DataFrame[column][row] 
+        prob = math.log(pop / self.total_pop)
+        return prob 
 
-    def weight_prob_log(self, geo_info):
+    def _weight_prob_log(self, geo_info):
         return 0
 
     def classifier(self, landmarks, pdfs, geo_info):
@@ -97,8 +103,8 @@ class Simulation():
                 if geo_info[landmark][1] and city in geo_info[landmark][1].keys():
                     hop, freq = geo_info[landmark][1][city]
                     freq_log += math.log(1.0 / hop * freq + math.e) 
-            population = self.pp_prob_log(city)
-            weight = self.weight_prob_log(geo_info)
+            population = self._pp_prob_log(city)
+            weight = self._weight_prob_log(geo_info)
             union_prob += freq_log + population + weight
             result[city] = union_prob
         # if good_candidates is empty(no route information), select best from all.
@@ -111,7 +117,7 @@ class Simulation():
 
         return best_candidate
 
-    def padding(self, test_rtt):
+    def _padding(self, test_rtt):
         """Some <ip-city> RTTs are not enough(<60), make it full."""
         for ip in test_rtt:
             for ecs, rtts in test_rtt[ip].items():
@@ -119,8 +125,62 @@ class Simulation():
                     for i in range(self.MAX_TEST - len(rtts)):
                         avr = round(sum(rtts) / len(rtts), 2)
                         rtts.append(avr)
+    
+    def _add_latency(self, path, filename, test_rtt, test_type = 0, blocksize = 1024):
+        """add rtts and hdd delays(PDP delays as well), and get average of hdd delays
+        path -- the path of <filename>
+        filename -- hdd delays(PDP delays) filename
+        test_type -- test_type of simulation
+        blocksize -- file blocksize in simulation"""
+        if test_type == 0:
+            self.eigenvalue = 0
+        else:
+            extra_df = pd.read_csv(path + filename)
+            blocksize = str(blocksize)
+            if blocksize not in extra_df.columns:
+                print 'Bad blocksize: %s' % blocksize
+                return test_rtt
+            extra_delays = [float(delay) for delay in extra_df[blocksize] if delay != '-1.0']
+            for ip in test_rtt.iterkeys():
+                for ecs in test_rtt[ip].keys():
+                    test_rtt[ip][ecs] = self._synthetize(test_rtt[ip][ecs], extra_delays)
+            self.eigenvalue = sum(extra_delays) / len(extra_delays)
+        
+    def _synthetize(self, rtts, extra_delays):
+        """algorithm about how to add rtts and hdd delays(PDP delays)"""
+        num_of_rtts, num_of_delays = len(rtts), len(extra_delays)
+        if (num_of_rtts <= num_of_delays):
+            magic = random.sample(extra_delays, num_of_rtts)
+            for i in range(num_of_rtts):
+                rtts[i] += magic[i]
+        else:
+            for i in range(num_of_rtts):
+                magic = random.choice(extra_delays)
+                rtts[i] += magic
+        return rtts
 
-    def locate(self, rtt_path, route_path):
+
+    def _sample_latency(self, latencies, test_type = 0, index = 0):
+        """sample latency for different test, test_type == 0 represents IP geolocation,
+        test_type == 1 represents MAC-PDP geolocation, test_type == 2 represents S-PDP.
+        latencies -- a list of real latencies
+        test_type -- test_type of simulation
+        index -- index of <latencies>, only meaningful when test_type == 0"""
+        challenges, factor = 40, 3
+        if test_type == 0:
+            res = latencies[index]
+        elif test_type == 1:
+            sample = random.sample(latencies, challenges)
+            res = sum(sample) / len(sample) - self.eigenvalue
+        elif test_type == 2:
+            sample = random.sample(latencies, challenges / factor)
+            res = sum(sample) / len(sample) - self.eigenvalue
+        else:
+            res = -1
+        return res
+
+
+    def locate(self, rtt_path, route_path, test_type = 0, blocksize = 1024):
         """It loads all the data needed first, then geolocates the test data, 
         return the geolocation results."""
         ecs_list = self.select_ecs(0xffff)
@@ -130,14 +190,20 @@ class Simulation():
         pdfs = Training()
         pdfs.load('pdfs.pickle')
         rft = self.read_rft(ecs_list)
-        self.padding(test_rtt)
-
+        self._read_pop(rtt_path, 'population.csv')
+        self._padding(test_rtt)
+        self._add_latency(rtt_path, 'ecs_hdd0.csv', test_rtt, test_type, blocksize)
+        print 'Preparation Completed!'
+        
         target_cities = pdfs.pdfs.index
         avr_city_rate = {}.fromkeys(target_cities, 0)
         num_ip_of_city = {}.fromkeys(target_cities, 0)
         suc_rate = defaultdict(int)
         failure_geo = defaultdict(list)
+        step = 0
         for ip in test_rtt.iterkeys():
+            step += 1
+            print '%d / 4644' % step
             valid_ecs = [ecs for ecs in ecs_list if test_rtt[ip][ecs] != []]
             # if the ip just response to 3 less landmarks, ignore it.
             if len(valid_ecs) < 3:
@@ -147,7 +213,8 @@ class Simulation():
             for i in range(self.MAX_TEST):
                 geo_info = {}.fromkeys(valid_ecs)
                 for ecs in valid_ecs:
-                    latency = test_rtt[ip][ecs][i]
+                    latency = self._sample_latency(test_rtt[ip][ecs], test_type, i)
+                    #latency = test_rtt[ip][ecs][i]
                     trace = test_route[ip].get(ecs, None)
                     geo_info[ecs] = self.gen_geo_info(ecs, latency, trace, rft)
                 estimated_city = self.classifier(valid_ecs, pdfs, geo_info)
@@ -195,6 +262,6 @@ class Simulation():
 
 if __name__ == '__main__':
     simulate = Simulation()
-    results = simulate.locate('./resources/', './resources/route/')
-    simulate.reports(1, './reports/', results)
+    results = simulate.locate('./resources/', './resources/route/', 1)
+    simulate.reports(10, './reports/', results)
     print 'Simulation Completed.'

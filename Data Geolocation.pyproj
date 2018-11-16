@@ -25,6 +25,9 @@
   <ItemGroup>
     <Compile Include="Baggins.py" />
     <Compile Include="core_route.py" />
+    <Compile Include="hdd_simulate.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="framework\client.py" />
     <Compile Include="framework\cloud.py" />
     <Compile Include="framework\key.py" />
