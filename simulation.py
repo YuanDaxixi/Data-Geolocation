@@ -10,11 +10,11 @@ from collections import defaultdict
 
 class Simulation():
     """An offline geolocation simulation, all data is real, not imitated"""
-    MAX_TEST = 60
+    MAX_TEST = 100
     MAX_HOP = 2
 
-    def __init__(self):
-        pass
+    def __init__(self, test_time = 100):
+        self.MAX_TEST = test_time
 
     def select_ecs(self, option):
         """input an option(integer), return a list of ecs"""
@@ -47,6 +47,14 @@ class Simulation():
             route_table.load(filename)
             rft[city] = route_table
         return rft
+
+    def _read_test_ips(self, path, filename):
+        try:
+           fp = open(path + filename, 'r')
+        except IOError, e:
+            raise
+        test_ips = [ip.strip() for ip in fp.readlines()]
+        return test_ips
 
     def _read_pop(self, path, filename):
         self.pop_df = pd.read_csv(path + filename, index_col = 0, encoding = 'utf-8')
@@ -118,7 +126,7 @@ class Simulation():
         return best_candidate
 
     def _padding(self, test_rtt):
-        """Some <ip-city> RTTs are not enough(<60), make it full."""
+        """Some <ip-city> RTTs are not enough(<100), make it full."""
         for ip in test_rtt:
             for ecs, rtts in test_rtt[ip].items():
                 if rtts:
@@ -133,7 +141,7 @@ class Simulation():
         test_type -- test_type of simulation
         blocksize -- file blocksize in simulation"""
         if test_type == 0:
-            self.eigenvalue = 0
+            self.eigenvalue = 0.0
         else:
             extra_df = pd.read_csv(path + filename)
             blocksize = str(blocksize)
@@ -162,7 +170,7 @@ class Simulation():
 
     def _sample_latency(self, latencies, test_type = 0, index = 0):
         """sample latency for different test, test_type == 0 represents IP geolocation,
-        test_type == 1 represents MAC-PDP geolocation, test_type == 2 represents S-PDP.
+        test_type == 1 represents MAC-PDP geolocation, test_type == 2 represents E-PDP.
         latencies -- a list of real latencies
         test_type -- test_type of simulation
         index -- index of <latencies>, only meaningful when test_type == 0"""
@@ -173,17 +181,19 @@ class Simulation():
             sample = random.sample(latencies, challenges)
             res = sum(sample) / len(sample) - self.eigenvalue
         elif test_type == 2:
-            sample = random.sample(latencies, challenges / factor)
+            sample = random.sample(latencies, challenges / factor + 1)
             res = sum(sample) / len(sample) - self.eigenvalue
         else:
             res = -1
         return res
 
 
-    def locate(self, rtt_path, route_path, test_type = 0, blocksize = 1024):
+    def locate(self, rtt_path, route_path, test_file, pdp_file = 'ecs_hdd.csv', 
+               test_type = 0, blocksize = 1024):
         """It loads all the data needed first, then geolocates the test data, 
         return the geolocation results."""
         ecs_list = self.select_ecs(0xffff)
+        test_ips = self._read_test_ips(rtt_path, test_file)
         test_rtt = self.read_test_data('test.rtt', rtt_path)
         test_route = self.read_test_data('test.route', route_path)
         ip2city = load_ip2city('./resources/ip2city.pickle')
@@ -192,7 +202,7 @@ class Simulation():
         rft = self.read_rft(ecs_list)
         self._read_pop(rtt_path, 'population.csv')
         self._padding(test_rtt)
-        self._add_latency(rtt_path, 'ecs_hdd0.csv', test_rtt, test_type, blocksize)
+        self._add_latency(rtt_path, pdp_file, test_rtt, test_type, blocksize)
         print 'Preparation Completed!'
         
         target_cities = pdfs.pdfs.index
@@ -200,15 +210,15 @@ class Simulation():
         num_ip_of_city = {}.fromkeys(target_cities, 0)
         suc_rate = defaultdict(int)
         failure_geo = defaultdict(list)
-        step = 0
-        for ip in test_rtt.iterkeys():
+        step, total_ips = 0, len(test_ips)
+        for ip in test_ips:
             step += 1
-            print '%d / 4644' % step
+            print '%d / %d' % (step, total_ips)
             valid_ecs = [ecs for ecs in ecs_list if test_rtt[ip][ecs] != []]
             # if the ip just response to 3 less landmarks, ignore it.
             if len(valid_ecs) < 3:
                 continue
-            real_city = ip2city[ip].decode('utf-8')               
+            real_city = ip2city[ip].decode('utf-8')
             num_ip_of_city[real_city] += 1 # total number of valid ip to real_city
             for i in range(self.MAX_TEST):
                 geo_info = {}.fromkeys(valid_ecs)
@@ -227,7 +237,7 @@ class Simulation():
 
         for city in avr_city_rate.keys():
             avr_city_rate[city] /= num_ip_of_city[city]
-        bad_ips = set(test_rtt.keys()).difference(set(suc_rate.keys()))
+        bad_ips = set(test_ips).difference(set(suc_rate.keys()))
         for ip in failure_geo.keys():
             failure_geo[ip] = [ip2city[ip], str(len(failure_geo[ip]))] + failure_geo[ip]
             
@@ -261,7 +271,9 @@ class Simulation():
                 fp.write(output)
 
 if __name__ == '__main__':
-    simulate = Simulation()
-    results = simulate.locate('./resources/', './resources/route/', 1)
-    simulate.reports(10, './reports/', results)
-    print 'Simulation Completed.'
+    simulate = Simulation(100)
+    for i in range(6):
+        results = simulate.locate('./resources/', './resources/route/', 'test_ips.txt',
+                                 'WD-E-PDP.csv', 2)
+        simulate.reports(200 + i, './reports/e-pdp/', results)
+        print '%dth Simulation Completed.' % i

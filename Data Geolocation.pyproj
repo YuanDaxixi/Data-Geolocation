@@ -5,7 +5,7 @@
     <ProjectGuid>58bf78db-1a19-437c-a5b5-204bd9acb099</ProjectGuid>
     <ProjectTypeGuids>{a41c8ea1-112a-4a2d-9f91-29557995525f};{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>simulation.py</StartupFile>
+    <StartupFile>hdd_simulate.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
