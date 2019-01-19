@@ -31,8 +31,7 @@ def read_net_time(path, filename):
     rtts.sort()
     return rtts
 
-def read_hdd_time(path, filename, start = 512, end = 1048576, factor = 2):
-    cut = 0
+def read_hdd_time(path, filename, start = 512, end = 1048576, factor = 2, cut = 0):
     try:
         fp = open(path + filename, 'r')
     except IOError, e:
@@ -55,7 +54,7 @@ def read_hdd_time(path, filename, start = 512, end = 1048576, factor = 2):
     return dic
 
 def gen_avr_time_report(path, prefix, mode, start = 512, end = 1048576, factor = 2):
-    msb, cut = start, 0
+    msb, cut = start, 5
     res = {}
     while msb <= end:
         filename = mode % (prefix, msb)
@@ -158,15 +157,17 @@ if __name__ == '__main__':
     #hdd_time = read_hdd_time('./hdd-test/', 'SSD-8192MB-random-read.txt')
     #write_csv(hdd_time, 'SSD-hdd.csv', 300)
 
-    path = 'G:\\programmer yuan\\code\\self-study\\Project\\Data Geolocation\\hdd-test\\'
+    #path = 'G:\\programmer yuan\\code\\self-study\\Project\\Data Geolocation\\hdd-test\\'
     #gen_avr_time_report(path, 'SSD', "%s-%dMB-random-read.txt", 1, 8192)
-    gen_avr_time_report(path, 'ALi', "%s-%dMB-random-read.txt", 1, 8192)
+    #gen_avr_time_report(path, 'ALi', "%s-%dMB-random-read.txt", 1, 8192)
     #gen_avr_time_report(path, 'TX', "%s-%dMB-random-read.txt", 1, 8192)
     #gen_avr_time_report(path, 'WD', "%s-%dMB-random-read.txt", 1, 8192)
 
-    #hdd_time = read_hdd_time('./PDP/', 'WD-6-E-PDP.txt')
+    #hdd_time = read_hdd_time('./PDP/', 'WD-3-E-PDP.txt')
     #write_csv(hdd_time, 'WD-E-PDP.csv', 100)
     
+    hdd_time = read_hdd_time('./PDP/', 'ALi-3-E-PDP.txt', cut = 5)
+    write_csv(hdd_time, 'ALi-E-PDP.csv', 100)
     #path = 'G:\\programmer yuan\\code\\self-study\\Project\\Data Geolocation\\PDP\\'
     #gen_pdp_time_report(path, 'WD', "%s-%d-E-PDP.txt", 2, 10, step = 1)
     #gen_pdp_time_report(path, 'ALi', "%s-%d-E-PDP.txt", 2, 10, step = 1)

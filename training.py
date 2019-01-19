@@ -34,12 +34,12 @@ class Training():
     def gen_test(self, filename = 'Rtts.rtt'):
         """generates train data from object in <filename>"""
         rtt_map = self._read(filename)
-        train_rtt= {}
+        train_rtt = {}
         src_cities = rtt_map.keys()
         for src_city in src_cities:
             train_rtt[src_city]= {}
             for dst_city, rtts in rtt_map[src_city].items():
-                dst_city, rtts = dst_city.decode('utf-8'), [float(rtt) for rtt in rtts]
+                rtts = [float(rtt) for rtt in rtts]
                 rtts.sort()
                 train_rtt[src_city][dst_city] = rtts[0::2]                
         self._write(train_rtt, 'train.rtt')
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     print pdfs.cnd_prob_log(u'西安', u'武汉', 50)
     print pdfs.cnd_prob_log(u'西安', u'西安', 50)
     pdfs.plot_pdf(u'西安', u'西安')
-    pdfs.plot_pdf(u'西安', u'武汉')
-    pdfs.plot_pdf(u'西安', u'拉萨')
+    pdfs.plot_pdf(u'北京', u'北京')
+    pdfs.plot_pdf(u'青岛', u'青岛')
 
 
